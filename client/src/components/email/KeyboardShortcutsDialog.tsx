@@ -27,7 +27,7 @@ interface KeyboardShortcutsDialogProps {
   onClose: () => void;
 }
 
-export default function KeyboardShortcutsDialog({ open, onClose }: KeyboardShortcutsDialogProps) {
+function KeyboardShortcutsDialog({ open, onClose }: KeyboardShortcutsDialogProps) {
   return (
     <Dialog open={open} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-md">
@@ -49,3 +49,6 @@ export default function KeyboardShortcutsDialog({ open, onClose }: KeyboardShort
     </Dialog>
   );
 }
+
+export { KeyboardShortcutsDialog };
+export default KeyboardShortcutsDialog;

@@ -37,7 +37,7 @@ interface ComposeDialogProps {
   isSending: boolean;
 }
 
-export default function ComposeDialog({
+function ComposeDialog({
   open,
   onClose,
   to,
@@ -122,3 +122,6 @@ export default function ComposeDialog({
     </Dialog>
   );
 }
+
+export { ComposeDialog };
+export default ComposeDialog;

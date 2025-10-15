@@ -20,7 +20,7 @@ interface AccountsDialogProps {
   getInitials: (email: string) => string;
 }
 
-export default function AccountsDialog({
+function AccountsDialog({
   open,
   onClose,
   accounts,
@@ -89,3 +89,6 @@ export default function AccountsDialog({
     </Dialog>
   );
 }
+
+export { AccountsDialog };
+export default AccountsDialog;
