@@ -47,9 +47,9 @@ import { VirtualizedEmailMessages } from './VirtualizedEmailMessages';
 import { EmailListSkeleton, EmailDetailSkeleton } from './loading-skeleton';
 
 // Lazy-loaded components
-const ComposeDialog = lazy(() => import('./ComposeDialog').then(m => ({ default: m.ComposeDialog })));
-const AccountsDialog = lazy(() => import('./AccountsDialog').then(m => ({ default: m.AccountsDialog })));
-const KeyboardShortcutsDialog = lazy(() => import('./KeyboardShortcutsDialog').then(m => ({ default: m.KeyboardShortcutsDialog })));
+const ComposeDialog = lazy(() => import('./ComposeDialog'));
+const AccountsDialog = lazy(() => import('./AccountsDialog'));
+const KeyboardShortcutsDialog = lazy(() => import('./KeyboardShortcutsDialog'));
 
 // Import types
 import { EmailAccount, EmailThread, EmailMessage, EmailFolder } from '@/types/email';

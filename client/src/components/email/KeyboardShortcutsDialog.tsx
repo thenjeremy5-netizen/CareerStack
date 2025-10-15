@@ -23,13 +23,13 @@ const shortcuts: KeyboardShortcut[] = [
 ];
 
 interface KeyboardShortcutsDialogProps {
-  isOpen: boolean;
+  open: boolean;
   onClose: () => void;
 }
 
-export default function KeyboardShortcutsDialog({ isOpen, onClose }: KeyboardShortcutsDialogProps) {
+export default function KeyboardShortcutsDialog({ open, onClose }: KeyboardShortcutsDialogProps) {
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={open} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Keyboard Shortcuts</DialogTitle>
