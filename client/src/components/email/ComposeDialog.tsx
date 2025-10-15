@@ -15,35 +15,44 @@ import { Input } from '@/components/ui/input';
 import { Send, X } from 'lucide-react';
 
 interface ComposeDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
+  open: boolean;
   to: string;
   subject: string;
   body: string;
   attachments: File[];
+  isDragActive?: boolean;
+  getRootProps?: any;
+  getInputProps?: any;
+  onClose: () => void;
+  onDiscard: () => void;
   onToChange: (to: string) => void;
   onSubjectChange: (subject: string) => void;
   onBodyChange: (body: string) => void;
-  onAddAttachments: (files: File[]) => void;
-  onRemoveAttachment: (index: number) => void;
   onSend: () => void;
+  onRemoveAttachment: (index: number) => void;
+  onEmojiClick?: () => void;
+  onScheduleClick?: () => void;
+  onInsertLink?: () => void;
+  onInsertImage?: () => void;
   isSending: boolean;
 }
 
-export default function ComposeDialog({
-  isOpen,
+function ComposeDialog({
+  open,
   onClose,
   to,
   subject,
   body,
+  attachments,
   onToChange,
   onSubjectChange,
   onBodyChange,
   onSend,
+  onRemoveAttachment,
   isSending,
 }: ComposeDialogProps) {
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={open} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>New Message</DialogTitle>
@@ -77,6 +86,26 @@ export default function ComposeDialog({
               onChange={(e) => onBodyChange(e.target.value)}
             />
           </div>
+
+          {attachments.length > 0 && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Attachments</label>
+              <div className="space-y-1">
+                {attachments.map((file, index) => (
+                  <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                    <span className="text-sm text-gray-700 truncate">{file.name}</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onRemoveAttachment(index)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           
           <div className="flex justify-between">
             <Button variant="outline" onClick={onClose}>
@@ -93,3 +122,6 @@ export default function ComposeDialog({
     </Dialog>
   );
 }
+
+export { ComposeDialog };
+export default ComposeDialog;
