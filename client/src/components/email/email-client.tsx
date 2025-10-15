@@ -721,7 +721,7 @@ function EmailClientInner() {
           {selection.selectedThread && (
             <EmailDetailModal
               open={!!selection.selectedThread}
-              message={threadMessages[0] || null}
+              messages={threadMessages}
               onClose={() => selection.setSelectedThread(null)}
               onReply={compose.openReply}
               onReplyAll={compose.openReplyAll}
