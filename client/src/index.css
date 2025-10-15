@@ -1,0 +1,360 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: hsl(220 15% 98%);
+  --foreground: hsl(220 15% 12%);
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(220 15% 12%);
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(220 15% 12%);
+  --primary: hsl(214 95% 50%);
+  --primary-foreground: hsl(0 0% 100%);
+  --secondary: hsl(220 14% 96%);
+  --secondary-foreground: hsl(220 15% 12%);
+  --muted: hsl(220 14% 96%);
+  --muted-foreground: hsl(220 10% 46%);
+  --accent: hsl(167 85% 45%);
+  --accent-foreground: hsl(0 0% 100%);
+  --destructive: hsl(0 84% 60%);
+  --destructive-foreground: hsl(0 0% 100%);
+  --border: hsl(220 13% 91%);
+  --input: hsl(220 13% 91%);
+  --ring: hsl(214 95% 50%);
+  --chart-1: hsl(214 95% 50%);
+  --chart-2: hsl(167 85% 45%);
+  --chart-3: hsl(45 93% 47%);
+  --chart-4: hsl(142 76% 36%);
+  --chart-5: hsl(346 77% 50%);
+  --sidebar: hsl(220 14% 96%);
+  --sidebar-foreground: hsl(220 15% 12%);
+  --sidebar-primary: hsl(214 95% 50%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(167 85% 45%);
+  --sidebar-accent-foreground: hsl(0 0% 100%);
+  --sidebar-border: hsl(220 13% 91%);
+  --sidebar-ring: hsl(214 95% 50%);
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-serif: ui-serif, Georgia, serif;
+  --font-mono: ui-monospace, "SF Mono", Monaco, Consolas, monospace;
+  --radius: 12px;
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+  --tracking-normal: 0em;
+  --spacing: 0.25rem;
+}
+
+.dark {
+  --background: hsl(220 18% 8%);
+  --foreground: hsl(220 10% 95%);
+  --card: hsl(220 16% 12%);
+  --card-foreground: hsl(220 10% 95%);
+  --popover: hsl(220 18% 8%);
+  --popover-foreground: hsl(220 10% 95%);
+  --primary: hsl(214 95% 55%);
+  --primary-foreground: hsl(0 0% 100%);
+  --secondary: hsl(220 14% 16%);
+  --secondary-foreground: hsl(220 10% 95%);
+  --muted: hsl(220 14% 16%);
+  --muted-foreground: hsl(220 10% 60%);
+  --accent: hsl(167 85% 45%);
+  --accent-foreground: hsl(0 0% 100%);
+  --destructive: hsl(0 84% 60%);
+  --destructive-foreground: hsl(0 0% 100%);
+  --border: hsl(220 13% 20%);
+  --input: hsl(220 13% 20%);
+  --ring: hsl(214 95% 55%);
+  --chart-1: hsl(214 95% 55%);
+  --chart-2: hsl(167 85% 45%);
+  --chart-3: hsl(45 93% 47%);
+  --chart-4: hsl(142 76% 36%);
+  --chart-5: hsl(346 77% 50%);
+  --sidebar: hsl(220 16% 12%);
+  --sidebar-foreground: hsl(220 10% 95%);
+  --sidebar-primary: hsl(214 95% 55%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(167 85% 45%);
+  --sidebar-accent-foreground: hsl(0 0% 100%);
+  --sidebar-border: hsl(220 13% 20%);
+  --sidebar-ring: hsl(214 95% 55%);
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-serif: ui-serif, Georgia, serif;
+  --font-mono: ui-monospace, "SF Mono", Monaco, Consolas, monospace;
+  --radius: 12px;
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.4), 0 1px 2px -1px rgb(0 0 0 / 0.4);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -4px rgb(0 0 0 / 0.4);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.4), 0 8px 10px -6px rgb(0 0 0 / 0.4);
+  --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.5);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+    font-feature-settings: "cv11", "ss01";
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight;
+    line-height: 1.2;
+  }
+
+  h1 {
+    @apply text-4xl lg:text-5xl;
+  }
+
+  h2 {
+    @apply text-3xl lg:text-4xl;
+  }
+
+  h3 {
+    @apply text-2xl lg:text-3xl;
+  }
+
+  p {
+    line-height: 1.625;
+  }
+}
+
+@layer components {
+  .glass-effect {
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.08);
+  }
+
+  .editor-toolbar {
+    border-bottom: 1px solid var(--border);
+    background: var(--card);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .file-upload-area {
+    background: linear-gradient(135deg, hsl(220 15% 99%) 0%, hsl(220 14% 97%) 100%);
+    border: 2px dashed var(--border);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .file-upload-area:hover {
+    border-color: var(--primary);
+    background: linear-gradient(135deg, hsl(214 100% 97%) 0%, hsl(220 14% 97%) 100%);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
+
+  .smooth-hover {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .smooth-hover:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+  }
+
+  .card-interactive {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .card-interactive:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -1000px 0; }
+  100% { background-position: 1000px 0; }
+}
+
+.animate-slide-in {
+  animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.processing-animation {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.resume-editor [contenteditable] {
+  outline: none;
+}
+
+.resume-editor [contenteditable]:focus {
+  background-color: rgba(59, 130, 246, 0.05);
+  border-radius: 4px;
+}
+
+.resume-editor .drop-zone {
+  border: 2px dashed transparent;
+  transition: all 0.3s ease;
+}
+
+.resume-editor .drop-zone:hover,
+.resume-editor .drop-zone.drag-over {
+  border-color: var(--primary);
+  background-color: rgba(59, 130, 246, 0.05);
+}
+
+/* SuperDoc Editor Styles - Full Word-like editing */
+.superdoc-toolbar {
+  /* Flexible toolbar height for all formatting options */
+  min-height: 48px;
+  max-height: 120px;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  overflow-y: hidden;
+  /* Smooth scrollbar */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+.superdoc-toolbar::-webkit-scrollbar {
+  height: 6px;
+}
+
+.superdoc-toolbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.superdoc-toolbar::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+.superdoc-toolbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.superdoc-editor {
+  /* Main editor container styling */
+  flex: 1;
+  overflow-y: auto; /* Allow vertical scrolling for multiple pages */
+  overflow-x: auto; /* Allow horizontal scrolling if needed */
+  background: hsl(220 14% 96%);
+  position: relative;
+  transition: transform 0.2s ease-in-out; /* Smooth zoom transitions */
+}
+
+/* Smooth scrollbars for editor */
+.superdoc-editor::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+.superdoc-editor::-webkit-scrollbar-track {
+  background: hsl(220 14% 96%);
+}
+
+.superdoc-editor::-webkit-scrollbar-thumb {
+  background: hsl(220 10% 70%);
+  border-radius: 6px;
+  border: 2px solid hsl(220 14% 96%);
+}
+
+.superdoc-editor::-webkit-scrollbar-thumb:hover {
+  background: hsl(220 10% 60%);
+}
+
+/* Ensure SuperDoc content is properly displayed - Allow it to grow for multiple pages */
+.superdoc-editor > div {
+  min-height: 100%; /* Minimum height, but can grow */
+  width: 100%;
+  padding: 20px 0; /* Add vertical padding for better page spacing */
+}
+
+/* SuperDoc page view styling - Each page should be visible */
+.superdoc-editor .page {
+  background: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin: 20px auto;
+  display: block; /* Ensure pages are displayed as blocks */
+}
+
+/* Make sure all pages are visible in the document */
+.superdoc-editor .ProseMirror {
+  min-height: auto !important;
+  height: auto !important;
+}
+
+/* Ensure page breaks are visible */
+.superdoc-editor .page-break {
+  display: block;
+  page-break-after: always;
+  break-after: page;
+}
+
+/* Ensure SuperDoc shows all document pages */
+.superdoc-editor [data-type="page"],
+.superdoc-editor .superdoc-page,
+.superdoc-editor .document-page {
+  display: block !important;
+  margin: 20px auto;
+  background: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Make sure the document container allows scrolling through all pages */
+.superdoc-editor .superdoc-content,
+.superdoc-editor .editor-content {
+  height: auto !important;
+  min-height: 100%;
+}
+
+/* Dark mode support for SuperDoc */
+.dark .superdoc-toolbar {
+  background: var(--card);
+  border-color: var(--border);
+}
+
+.dark .superdoc-editor {
+  background: hsl(220 16% 12%);
+}
+
+.dark .superdoc-editor .page,
+.dark .superdoc-editor [data-type="page"],
+.dark .superdoc-editor .superdoc-page,
+.dark .superdoc-editor .document-page {
+  background: hsl(220 14% 16%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
