@@ -43,13 +43,13 @@ import { EmailErrorBoundary } from './EmailErrorBoundary';
 import { EmailSidebar } from './EmailSidebar';
 import { EmailHeader } from './EmailHeader';
 import { EmailToolbar } from './EmailToolbar';
-import { VirtualizedEmailMessages } from './VirtualizedEmailMessages';
-import { EmailListSkeleton, EmailDetailSkeleton } from './loading-skeleton';
+import { EmailListSkeleton } from './loading-skeleton';
 
 // Lazy-loaded components
 const ComposeDialog = lazy(() => import('./ComposeDialog'));
 const AccountsDialog = lazy(() => import('./AccountsDialog'));
 const KeyboardShortcutsDialog = lazy(() => import('./KeyboardShortcutsDialog'));
+const EmailDetailModal = lazy(() => import('./EmailDetailModal'));
 
 // Import types
 import { EmailAccount, EmailThread, EmailMessage, EmailFolder } from '@/types/email';
@@ -65,7 +65,6 @@ function EmailClientInner() {
   // State
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectedFolder, setSelectedFolder] = useState('inbox');
-  const [view] = useState<'list' | 'split'>('split');
 
   // Custom hooks for state management
   const selection = useEmailSelection();
@@ -512,6 +511,30 @@ function EmailClientInner() {
     }
   };
 
+  // Email navigation (next/previous)
+  const handleNextEmail = () => {
+    if (!selection.selectedThread) return;
+    const currentIndex = emailThreads.findIndex(t => t.id === selection.selectedThread);
+    if (currentIndex < emailThreads.length - 1) {
+      selection.setSelectedThread(emailThreads[currentIndex + 1].id);
+    }
+  };
+
+  const handlePreviousEmail = () => {
+    if (!selection.selectedThread) return;
+    const currentIndex = emailThreads.findIndex(t => t.id === selection.selectedThread);
+    if (currentIndex > 0) {
+      selection.setSelectedThread(emailThreads[currentIndex - 1].id);
+    }
+  };
+
+  const currentEmailIndex = selection.selectedThread 
+    ? emailThreads.findIndex(t => t.id === selection.selectedThread)
+    : -1;
+
+  const hasNextEmail = currentEmailIndex >= 0 && currentEmailIndex < emailThreads.length - 1;
+  const hasPreviousEmail = currentEmailIndex > 0;
+
   return (
     <TooltipProvider>
       <div className="flex flex-col h-full bg-white">
@@ -583,13 +606,10 @@ function EmailClientInner() {
               displayedCount={emailThreads.length}
             />
 
-            {/* Email List or Split View */}
+            {/* Email List - Full Width */}
             <div className="flex-1 flex overflow-hidden">
               {/* Thread List */}
-              <div className={cn(
-                "bg-white overflow-hidden flex flex-col border-r border-gray-200",
-                selection.selectedThread && view === 'split' ? "w-1/2" : "w-full"
-              )}>
+              <div className="bg-white overflow-hidden flex flex-col w-full">
                 {isLoading ? (
                   <EmailListSkeleton />
                 ) : emailThreads.length === 0 ? (
@@ -641,28 +661,6 @@ function EmailClientInner() {
                   />
                 )}
               </div>
-
-              {/* Email Detail View */}
-              {selection.selectedThread && view === 'split' && (
-                <div className="flex-1 flex flex-col bg-white overflow-hidden">
-                  <div className="px-6 py-4 border-b border-gray-200">
-                    <h1 className="text-2xl font-normal text-gray-900">
-                      {threadMessages[0]?.subject || '(no subject)'}
-                    </h1>
-                  </div>
-
-                  {messagesLoading ? (
-                    <EmailDetailSkeleton />
-                  ) : (
-                    <VirtualizedEmailMessages
-                      messages={threadMessages}
-                      onStarToggle={(messageId, isStarred) => starMutation.mutate({ messageId, isStarred })}
-                      onReply={compose.openReply}
-                      getInitials={getInitials}
-                    />
-                  )}
-                </div>
-              )}
             </div>
           </main>
         </div>
@@ -716,6 +714,36 @@ function EmailClientInner() {
             <KeyboardShortcutsDialog
               open={modals.keyboardShortcuts}
               onClose={modals.closeKeyboardShortcuts}
+            />
+          )}
+
+          {/* Email Detail Modal */}
+          {selection.selectedThread && (
+            <EmailDetailModal
+              open={!!selection.selectedThread}
+              message={threadMessages[0] || null}
+              onClose={() => selection.setSelectedThread(null)}
+              onReply={compose.openReply}
+              onReplyAll={compose.openReplyAll}
+              onForward={compose.openForward}
+              onArchive={() => {
+                if (selection.selectedThread) {
+                  archiveMutation.mutate(selection.selectedThread);
+                  selection.setSelectedThread(null);
+                }
+              }}
+              onDelete={() => {
+                if (selection.selectedThread && confirm('Delete this email?')) {
+                  deleteThreadMutation.mutate(selection.selectedThread);
+                  selection.setSelectedThread(null);
+                }
+              }}
+              onStarToggle={(messageId, isStarred) => starMutation.mutate({ messageId, isStarred })}
+              getInitials={getInitials}
+              onNext={handleNextEmail}
+              onPrevious={handlePreviousEmail}
+              hasNext={hasNextEmail}
+              hasPrevious={hasPreviousEmail}
             />
           )}
         </Suspense>
