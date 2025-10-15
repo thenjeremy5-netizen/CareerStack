@@ -234,12 +234,49 @@ function EmailClientInner() {
       if (!response.ok) throw new Error('Failed');
       return response.json();
     },
+    onMutate: async (threadId: string) => {
+      const listKey = ['/api/marketing/emails/threads', selectedFolder, search.debouncedSearchQuery];
+      await queryClient.cancelQueries({ queryKey: listKey });
+      const previousList = queryClient.getQueryData(listKey);
+
+      // Optimistically remove the thread from the list pages
+      queryClient.setQueryData(listKey, (old: any) => {
+        if (!old?.pages) return old;
+        return {
+          ...old,
+          pages: old.pages.map((page: any) => ({
+            ...page,
+            threads: (page.threads || []).filter((t: any) => t.id !== threadId),
+            total: Math.max(0, (page.total || 0) - 1),
+          })),
+        };
+      });
+
+      // Also clear messages cache for the deleted thread
+      queryClient.removeQueries({
+        queryKey: ['/api/marketing/emails/threads', threadId, 'messages'],
+        exact: true,
+      });
+
+      // Deselect if currently selected
+      if (selection.selectedThread === threadId) {
+        selection.setSelectedThread(null);
+      }
+
+      return { previousList, listKey };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previousList) {
+        queryClient.setQueryData(context.listKey, context.previousList);
+      }
+      toast.error('Failed to delete conversation');
+    },
     onSuccess: () => {
+      // Ensure list refetch for consistency
       queryClient.invalidateQueries({ 
         queryKey: ['/api/marketing/emails/threads', selectedFolder, search.debouncedSearchQuery],
         exact: true
       });
-      selection.setSelectedThread(null);
       toast.success('Conversation deleted');
     },
   });
@@ -270,12 +307,42 @@ function EmailClientInner() {
         )
       );
     },
-    onSuccess: (_, threadIds) => {
+    onMutate: async (threadIds: string[]) => {
+      const listKey = ['/api/marketing/emails/threads', selectedFolder, search.debouncedSearchQuery];
+      await queryClient.cancelQueries({ queryKey: listKey });
+      const previousList = queryClient.getQueryData(listKey);
+
+      queryClient.setQueryData(listKey, (old: any) => {
+        if (!old?.pages) return old;
+        return {
+          ...old,
+          pages: old.pages.map((page: any) => ({
+            ...page,
+            threads: (page.threads || []).filter((t: any) => !threadIds.includes(t.id)),
+            total: Math.max(0, (page.total || 0) - threadIds.length),
+          })),
+        };
+      });
+
+      // Clear selection optimistically and remove messages caches
+      selection.clearSelection();
+      threadIds.forEach(id => {
+        queryClient.removeQueries({ queryKey: ['/api/marketing/emails/threads', id, 'messages'], exact: true });
+      });
+
+      return { previousList, listKey };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previousList) {
+        queryClient.setQueryData(context.listKey, context.previousList);
+      }
+      toast.error('Bulk delete failed');
+    },
+    onSuccess: (_data, threadIds) => {
       queryClient.invalidateQueries({ 
         queryKey: ['/api/marketing/emails/threads', selectedFolder, search.debouncedSearchQuery],
         exact: true
       });
-      selection.clearSelection();
       toast.success(`${threadIds.length} conversations deleted`);
     },
   });
@@ -436,6 +503,10 @@ function EmailClientInner() {
   };
 
   const handleBulkDelete = () => {
+    if (selection.selectedThreads.size === 0) {
+      toast.info('No conversations selected');
+      return;
+    }
     if (confirm(`Delete ${selection.selectedThreads.size} conversations?`)) {
       bulkDeleteMutation.mutate(Array.from(selection.selectedThreads));
     }

@@ -19,16 +19,11 @@ import {
   bulkOperationsRateLimiter,
   emailSendRateLimiter as emailRateLimiter
 } from '../middleware/rateLimiter';
-import { csrfProtection, csrfTokenMiddleware } from '../middleware/csrf';
+// CSRF is enforced globally in localAuth via session-based double-submit.
+// Avoid per-route CSRF here to prevent token mismatches and duplicate validation.
 
-// Conditional CSRF protection - bypass in development for debugging
-const conditionalCSRF = (req: any, res: any, next: any) => {
-  if (process.env.NODE_ENV === 'development') {
-    logger.info('🔧 CSRF bypassed in development mode');
-    return next();
-  }
-  return csrfProtection(req, res, next);
-};
+// No-op CSRF middleware: rely on global CSRF enforcement from localAuth
+const conditionalCSRF = (_req: any, _res: any, next: any) => next();
 import { EmailService } from '../services/emailService';
 import { ImapService } from '../services/imapService';
 import { EnhancedGmailOAuthService } from '../services/enhancedGmailOAuthService';
@@ -345,8 +340,7 @@ const requireMarketingRole = async (req: any, res: any, next: any) => {
 router.use(isAuthenticated);
 router.use(requireMarketingRole);
 
-// Apply CSRF token generation to all routes (adds token to response)
-router.use(csrfTokenMiddleware);
+// Do NOT regenerate or overwrite CSRF token here; handled globally in localAuth
 
 // Apply global rate limiting to all marketing routes
 router.use(marketingRateLimiter);
@@ -2509,35 +2503,7 @@ router.get('/emails/drafts', async (req, res) => {
   }
 });
 
-// Delete email thread
-router.delete('/emails/threads/:threadId', conditionalCSRF, async (req, res) => {
-  try {
-    const { threadId } = req.params;
-    
-    // Verify ownership
-    const thread = await db.query.emailThreads.findFirst({
-      where: and(
-        eq(emailThreads.id, threadId),
-        eq(emailThreads.createdBy, req.user!.id)
-      )
-    });
-    
-    if (!thread) {
-      return res.status(404).json({ message: 'Thread not found' });
-    }
-    
-    // Delete messages first (cascade should handle this, but being explicit)
-    await db.delete(emailMessages).where(eq(emailMessages.threadId, threadId));
-    
-    // Delete thread
-    await db.delete(emailThreads).where(eq(emailThreads.id, threadId));
-    
-    res.json({ message: 'Thread deleted successfully' });
-  } catch (error) {
-    logger.error({ error: error }, 'Error deleting thread:');
-    res.status(500).json({ message: 'Failed to delete thread' });
-  }
-});
+// (Duplicate DELETE /emails/threads/:threadId removed to avoid conflicting handlers)
 
 // REPORTS ROUTES REMOVED
 
