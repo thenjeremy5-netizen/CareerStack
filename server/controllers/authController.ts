@@ -84,26 +84,37 @@ export class AuthController {
       const hashedPassword = await AuthService.hashPassword(password);
       const verification = AuthService.generateEmailVerificationToken();
 
-      const [user] = await db.insert(users).values({
+      const result = await db.insert(users).values({
         email: normalizedEmail,
         password: hashedPassword,
         firstName,
         lastName,
         emailVerificationToken: verification.tokenHash,
         emailVerificationExpires: verification.expiresAt,
-      }).returning();
+      }).returning({
+        id: users.id,
+        email: users.email,
+        firstName: users.firstName,
+        lastName: users.lastName
+      });
+
+      const newUser = result[0];
+
+      if (!newUser || !newUser.id || !newUser.email || !newUser.firstName || !newUser.lastName) {
+        throw new Error('Failed to create user account');
+      }
 
       // Send verification email (raw token)
       await AuthService.sendVerificationEmail(
-        user.email,
-        `${user.firstName} ${user.lastName}`.trim() || 'User',
+        newUser.email,
+        `${newUser.firstName} ${newUser.lastName}`.trim() || 'User',
         verification.token
       );
 
       // Log the registration with enhanced tracking
       const { referrer, utm } = extractTracking(req);
       await ActivityTracker.logActivity(
-        user.id,
+        newUser.id.toString(),
         'register',
         'success',
         { method: 'email', referrer, utm },
@@ -112,7 +123,7 @@ export class AuthController {
 
       res.status(201).json({ 
         message: 'Registration successful. Please check your email to verify your account.',
-        userId: user.id,
+        userId: newUser.id.toString(),
       });
     } catch (error) {
       logger.error({ error: error }, 'Registration error:');

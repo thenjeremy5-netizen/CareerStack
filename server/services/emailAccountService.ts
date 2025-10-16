@@ -5,7 +5,7 @@
 
 import { db } from '../config/database';
 import { emailAccounts, emailMessages, emailThreads } from '@shared/schema';
-import { eq, and, desc, inArray } from 'drizzle-orm';
+import { eq, and, desc, inArray, sql } from 'drizzle-orm';
 import { CacheService, CACHE_PREFIXES, CACHE_TTL } from '../config/redis';
 import { RedisRateLimiter } from '../config/redis';
 import { logger } from '../utils/logger';
@@ -379,19 +379,21 @@ export class EmailAccountService {
     if (cached) return cached;
     
     // Query database
-    const [stats] = await db.execute(`
+    const { rows } = await db.execute(sql`
       SELECT 
         COUNT(*) as total_emails,
         SUM(CASE WHEN is_read = false THEN 1 ELSE 0 END) as unread_count,
         SUM(CASE WHEN DATE(sent_at) = CURRENT_DATE THEN 1 ELSE 0 END) as today_count
       FROM email_messages
-      WHERE email_account_id = $1
-    `, [accountId]);
+      WHERE email_account_id = ${accountId}
+    `);
+
+    const stats = rows[0];
     
     const result = {
-      totalEmails: parseInt(stats?.total_emails || '0'),
-      unreadCount: parseInt(stats?.unread_count || '0'),
-      todayCount: parseInt(stats?.today_count || '0'),
+      totalEmails: parseInt(String(stats?.total_emails) || '0'),
+      unreadCount: parseInt(String(stats?.unread_count) || '0'),
+      todayCount: parseInt(String(stats?.today_count) || '0'),
       storageUsed: 0, // Calculate if needed
     };
     

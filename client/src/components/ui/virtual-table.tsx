@@ -1,6 +1,8 @@
 import React, { useMemo, useCallback } from 'react';
-import { List } from 'react-window';
+import * as ReactWindow from 'react-window';
 import { Button } from '@/components/ui/button';
+
+const { FixedSizeList } = ReactWindow;
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Table,
@@ -58,15 +60,18 @@ function VirtualRow<T extends Record<string, any>>({ index, style, data }: RowPr
   const rowId = getRowId(row);
   const isSelected = selectedItems.includes(rowId);
 
-  const handleSelectRow = useCallback((checked: boolean) => {
-    if (!onSelectionChange) return;
-    
-    if (checked) {
-      onSelectionChange([...selectedItems, rowId]);
-    } else {
-      onSelectionChange(selectedItems.filter(id => id !== rowId));
-    }
-  }, [selectedItems, rowId, onSelectionChange]);
+  const handleSelectRow = useCallback(
+    (checked: boolean) => {
+      if (!onSelectionChange) return;
+
+      if (checked) {
+        onSelectionChange([...selectedItems, rowId]);
+      } else {
+        onSelectionChange(selectedItems.filter((id) => id !== rowId));
+      }
+    },
+    [selectedItems, rowId, onSelectionChange]
+  );
 
   return (
     <div
@@ -86,25 +91,22 @@ function VirtualRow<T extends Record<string, any>>({ index, style, data }: RowPr
           />
         </div>
       )}
-      
+
       {columns.map((column, colIndex) => (
         <div
           key={column.key}
-          className={cn(
-            'px-4 py-3 flex items-center',
-            column.className
-          )}
+          className={cn('px-4 py-3 flex items-center', column.className)}
           style={{ width: column.width || 'auto', minWidth: column.width || 150 }}
         >
           {column.render ? column.render(row[column.key], row) : row[column.key]}
         </div>
       ))}
-      
+
       {actions.length > 0 && (
         <div className="w-24 px-4 flex items-center justify-end space-x-1">
           {actions.slice(0, 2).map((action, actionIndex) => {
             if (action.show && !action.show(row)) return null;
-            
+
             const IconComponent = action.icon;
             return (
               <Button
@@ -138,30 +140,36 @@ export function VirtualTable<T extends Record<string, any>>({
   rowClassName,
   loading = false,
 }: VirtualTableProps<T>) {
-  const handleSelectAll = useCallback((checked: boolean) => {
-    if (!onSelectionChange) return;
-    
-    if (checked) {
-      const allIds = data.map(getRowId);
-      onSelectionChange(allIds);
-    } else {
-      onSelectionChange([]);
-    }
-  }, [data, getRowId, onSelectionChange]);
+  const handleSelectAll = useCallback(
+    (checked: boolean) => {
+      if (!onSelectionChange) return;
+
+      if (checked) {
+        const allIds = data.map(getRowId);
+        onSelectionChange(allIds);
+      } else {
+        onSelectionChange([]);
+      }
+    },
+    [data, getRowId, onSelectionChange]
+  );
 
   const isAllSelected = data.length > 0 && selectedItems.length === data.length;
   const isIndeterminate = selectedItems.length > 0 && selectedItems.length < data.length;
 
-  const itemData = useMemo(() => ({
-    items: data,
-    columns,
-    actions,
-    selectable,
-    selectedItems,
-    onSelectionChange,
-    getRowId,
-    rowClassName,
-  }), [data, columns, actions, selectable, selectedItems, onSelectionChange, getRowId, rowClassName]);
+  const itemData = useMemo(
+    () => ({
+      items: data,
+      columns,
+      actions,
+      selectable,
+      selectedItems,
+      onSelectionChange,
+      getRowId,
+      rowClassName,
+    }),
+    [data, columns, actions, selectable, selectedItems, onSelectionChange, getRowId, rowClassName]
+  );
 
   if (loading) {
     return (
@@ -179,7 +187,7 @@ export function VirtualTable<T extends Record<string, any>>({
           ))}
           {actions.length > 0 && <div className="w-24 text-right">Actions</div>}
         </div>
-        
+
         <div className="space-y-2 p-4">
           {Array.from({ length: 5 }).map((_, index) => (
             <div key={index} className="flex items-center space-x-4">
@@ -220,7 +228,7 @@ export function VirtualTable<T extends Record<string, any>>({
             />
           </div>
         )}
-        
+
         {columns.map((column) => (
           <div
             key={column.key}
@@ -230,29 +238,28 @@ export function VirtualTable<T extends Record<string, any>>({
             {column.label}
           </div>
         ))}
-        
+
         {actions.length > 0 && (
-          <div className="w-24 text-right font-semibold text-slate-700">
-            Actions
-          </div>
+          <div className="w-24 text-right font-semibold text-slate-700">Actions</div>
         )}
       </div>
 
       {/* Virtual List */}
       {data.length === 0 ? (
-        <div className="text-center py-8 text-slate-500">
-          No data available
-        </div>
+        <div className="text-center py-8 text-slate-500">No data available</div>
       ) : (
-        <List
-          height={height}
-          itemCount={data.length}
-          itemSize={itemHeight}
-          itemData={itemData}
-          overscanCount={5}
-        >
-          {VirtualRow}
-        </List>
+        <div style={{ height: height }}>
+          <FixedSizeList
+            height={height}
+            width="100%"
+            itemCount={data.length}
+            itemSize={itemHeight}
+            itemData={itemData}
+            overscanCount={5}
+          >
+            {VirtualRow as any}
+          </FixedSizeList>
+        </div>
       )}
     </div>
   );
@@ -268,25 +275,22 @@ export function useVirtualTable<T>(
     sortDirection?: 'asc' | 'desc';
   } = {}
 ) {
-  const {
-    pageSize = 50,
-    searchFields = [],
-    sortField,
-    sortDirection = 'asc',
-  } = options;
+  const { pageSize = 50, searchFields = [], sortField, sortDirection = 'asc' } = options;
 
   const [searchQuery, setSearchQuery] = React.useState('');
   const [selectedItems, setSelectedItems] = React.useState<string[]>([]);
   const [currentSortField, setCurrentSortField] = React.useState(sortField);
-  const [currentSortDirection, setCurrentSortDirection] = React.useState<'asc' | 'desc'>(sortDirection);
+  const [currentSortDirection, setCurrentSortDirection] = React.useState<'asc' | 'desc'>(
+    sortDirection
+  );
 
   // Filter data based on search query
   const filteredData = useMemo(() => {
     if (!searchQuery.trim()) return data;
-    
+
     const query = searchQuery.toLowerCase();
     return data.filter((item: any) => {
-      return searchFields.some(field => {
+      return searchFields.some((field) => {
         const value = item[field];
         return value && value.toString().toLowerCase().includes(query);
       });
@@ -296,25 +300,28 @@ export function useVirtualTable<T>(
   // Sort data
   const sortedData = useMemo(() => {
     if (!currentSortField) return filteredData;
-    
+
     return [...filteredData].sort((a: any, b: any) => {
       const aValue = a[currentSortField];
       const bValue = b[currentSortField];
-      
+
       if (aValue < bValue) return currentSortDirection === 'asc' ? -1 : 1;
       if (aValue > bValue) return currentSortDirection === 'asc' ? 1 : -1;
       return 0;
     });
   }, [filteredData, currentSortField, currentSortDirection]);
 
-  const handleSort = useCallback((field: string) => {
-    if (currentSortField === field) {
-      setCurrentSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
-    } else {
-      setCurrentSortField(field);
-      setCurrentSortDirection('asc');
-    }
-  }, [currentSortField]);
+  const handleSort = useCallback(
+    (field: string) => {
+      if (currentSortField === field) {
+        setCurrentSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+      } else {
+        setCurrentSortField(field);
+        setCurrentSortDirection('asc');
+      }
+    },
+    [currentSortField]
+  );
 
   return {
     data: sortedData,

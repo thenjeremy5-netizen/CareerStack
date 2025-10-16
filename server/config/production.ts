@@ -115,7 +115,7 @@ export function configureProductionMiddleware(app: Express, config: ProductionCo
         if (req.headers['x-no-compression']) {
           return false;
         }
-        return compression.filter(req, res);
+        return true;
       },
       level: 6, // Balanced compression level
       threshold: 1024, // Only compress responses > 1KB

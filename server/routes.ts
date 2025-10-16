@@ -843,7 +843,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const verification = AuthService.generateEmailVerificationToken();
 
       // Create user with verification fields (store only hash)
-      const [user] = await db
+      const result = await db
         .insert(users)
         .values({
           email,
@@ -860,11 +860,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const displayName = 'User';
       await AuthService.sendVerificationEmail(email, displayName, verification.token);
 
+      const insertedUser = Array.isArray(result) ? result[0] : result.rows[0];
+
       // Log activity (do NOT auto-login)
       try {
         const { referrer, utm } = extractTrackingInfo(req);
         await ActivityTracker.logActivity(
-          user.id,
+          insertedUser.id,
           'register',
           'success',
           { method: 'email', referrer, utm },
@@ -872,7 +874,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
       } catch {}
 
-      logSuccess('User registered (verification required)', { userId: user.id, email: user.email });
+      logSuccess('User registered (verification required)', { userId: insertedUser.id, email: insertedUser.email });
       return res.status(201).json({
         message: 'Registration successful. Please check your email to verify your account.',
       });
