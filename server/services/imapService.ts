@@ -83,7 +83,7 @@ export class ImapService {
       
       return { success: true };
     } catch (error) {
-      logger.error(`❌ IMAP connection failed for ${account.emailAddress}:`, error);
+      logger.error({ err: error }, `❌ IMAP connection failed for ${account.emailAddress}`);
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown error' 
@@ -190,7 +190,7 @@ export class ImapService {
         mailbox.release();
       }
     } catch (error) {
-      logger.error(`Error fetching emails for ${account.emailAddress}:`, error);
+      logger.error({ err: error }, `Error fetching emails for ${account.emailAddress}`);
       throw error;
     } finally {
       if (client) {
@@ -308,7 +308,7 @@ export class ImapService {
       const mailboxes = await client.list();
       return mailboxes.map(mb => mb.path);
     } catch (error) {
-      logger.error(`Error getting mailboxes for ${account.emailAddress}:`, error);
+      logger.error({ err: error }, `Error getting mailboxes for ${account.emailAddress}`);
       throw error;
     } finally {
       if (client) {

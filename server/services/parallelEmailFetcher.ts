@@ -65,7 +65,7 @@ export class ParallelEmailFetcher {
         }
       });
     } catch (error) {
-      logger.error('Error in parallel fetch:', error);
+      logger.error({ err: error }, 'Error in parallel fetch');
       return [];
     }
   }
@@ -88,7 +88,7 @@ export class ParallelEmailFetcher {
             account,
             {
               maxResults: options.maxResults || 50,
-              q: options.query,
+              query: options.query,
               labelIds: options.labelIds,
             }
           );
@@ -130,7 +130,7 @@ export class ParallelEmailFetcher {
       };
     } catch (error) {
       const duration = Date.now() - startTime;
-      logger.error(`❌ Failed to fetch account ${account.emailAddress}:`, error);
+      logger.error({ err: error }, `❌ Failed to fetch account ${account.emailAddress}`);
 
       return {
         accountId: account.id,
@@ -219,7 +219,7 @@ export class ParallelEmailFetcher {
 
         syncedCount++;
       } catch (error) {
-        logger.warn(`Failed to save message ${message.externalMessageId || message.id}:`, error);
+        logger.warn({ err: error }, `Failed to save message ${message.externalMessageId || message.id}`);
       }
     }
 
@@ -268,7 +268,7 @@ export class ParallelEmailFetcher {
         accounts: accounts.map(acc => acc.id),
       };
     } catch (error) {
-      logger.error('Error getting unified inbox:', error);
+      logger.error({ err: error }, 'Error getting unified inbox');
       return { threads: [], total: 0, accounts: [] };
     }
   }

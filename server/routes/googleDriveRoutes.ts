@@ -262,7 +262,7 @@ router.post('/download-and-process', isAuthenticated, async (req: any, res) => {
     
     // Get file metadata
     const metadata = await googleDriveService.getFileMetadata(fileId);
-    logger.info(`📊 File metadata:`, {
+    logger.info({
       name: metadata.name,
       size: metadata.size,
       mimeType: metadata.mimeType

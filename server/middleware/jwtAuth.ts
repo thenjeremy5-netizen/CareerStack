@@ -107,7 +107,7 @@ export async function jwtAuthMiddleware(
   req: Request,
   res: Response,
   next: NextFunction
-): Promise<void> {
+): Promise<void | Response> {
   try {
     // Get token from Authorization header or cookie
     const authHeader = req.headers.authorization;

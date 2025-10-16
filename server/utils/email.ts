@@ -218,13 +218,13 @@ export async function sendEmail(
         logger.info(`📧 Accepted: ${info2.accepted?.length || 0}, Rejected: ${info2.rejected?.length || 0}`);
         return true;
       } catch (fallbackError) {
-        logger.error({ error: fallbackError }, '❌ Fallback SMTP send failed:');
+        logger.error({ err: fallbackError }, '❌ Fallback SMTP send failed');
         throw primaryError;
       }
     }
     
   } catch (error) {
-    logger.error(`❌ Failed to send email to ${to}:`, error);
+    logger.error({ err: error }, `❌ Failed to send email to ${to}`);
     logger.error(`📧 Email subject: ${subject}`);
     
     // Log specific error details

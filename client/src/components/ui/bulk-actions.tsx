@@ -36,7 +36,7 @@ import { toast } from 'sonner';
 export interface BulkAction {
   id: string;
   label: string;
-  icon: React.ComponentType<{ size?: number }>;
+  icon: React.ComponentType<any>;
   variant?: 'default' | 'destructive' | 'outline';
   requiresConfirmation?: boolean;
   confirmationTitle?: string;

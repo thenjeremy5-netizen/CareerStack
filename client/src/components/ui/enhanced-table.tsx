@@ -42,7 +42,7 @@ export interface TableColumn<T = any> {
 
 export interface TableAction<T = any> {
   label: string;
-  icon: React.ComponentType<{ size?: number }>;
+  icon: React.ComponentType<any>;
   onClick: (row: T) => void;
   variant?: 'default' | 'destructive' | 'outline';
   show?: (row: T) => boolean;
@@ -180,7 +180,7 @@ export function EnhancedTable<T extends Record<string, any>>({
               <TableHead className="w-12">
                 <Checkbox
                   checked={isAllSelected}
-                  ref={(el) => {
+                  ref={(el: any) => {
                     if (el) el.indeterminate = isIndeterminate;
                   }}
                   onCheckedChange={handleSelectAll}

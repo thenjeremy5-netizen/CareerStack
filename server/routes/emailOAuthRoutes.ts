@@ -237,7 +237,7 @@ router.post('/oauth/callback', isAuthenticated, async (req: any, res: Response) 
         account: result.account
       });
     } else {
-      logger.error(`❌ ${provider} OAuth failed:`, result.error);
+      logger.error({ err: result.error }, `❌ ${provider} OAuth failed`);
       
       res.status(400).json({
         success: false,
@@ -1011,7 +1011,7 @@ router.post('/sync-all', isAuthenticated, emailAccountRateLimiter.middleware(), 
       totalMessages
     });
   } catch (error) {
-    logger.error('Parallel sync failed:', error);
+    logger.error({ err: error }, 'Parallel sync failed');
     res.status(500).json({
       success: false,
       error: 'Failed to sync accounts',
@@ -1063,7 +1063,7 @@ router.get('/unified-inbox', isAuthenticated, async (req: any, res: Response) =>
       fromCache: false
     });
   } catch (error) {
-    logger.error('Failed to get unified inbox:', error);
+    logger.error({ err: error }, 'Failed to get unified inbox');
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve unified inbox',
@@ -1083,7 +1083,7 @@ router.get('/performance/stats', isAuthenticated, async (req: any, res: Response
       stats
     });
   } catch (error) {
-    logger.error('Failed to get performance stats:', error);
+    logger.error({ err: error }, 'Failed to get performance stats');
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve performance statistics'
@@ -1130,7 +1130,7 @@ router.get('/search', isAuthenticated, async (req: any, res: Response) => {
       ...result
     });
   } catch (error) {
-    logger.error('Email search failed:', error);
+    logger.error({ err: error }, 'Email search failed');
     res.status(500).json({
       success: false,
       error: 'Search failed',
@@ -1153,7 +1153,7 @@ router.get('/search/operators', isAuthenticated, async (req: any, res: Response)
       operators
     });
   } catch (error) {
-    logger.error('Failed to get search operators:', error);
+    logger.error({ err: error }, 'Failed to get search operators');
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve search operators'
@@ -1176,7 +1176,7 @@ router.get('/search/analytics', isAuthenticated, async (req: any, res: Response)
       analytics
     });
   } catch (error) {
-    logger.error('Failed to get search analytics:', error);
+    logger.error({ err: error }, 'Failed to get search analytics');
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve search analytics'

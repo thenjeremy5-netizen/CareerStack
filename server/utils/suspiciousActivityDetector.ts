@@ -91,7 +91,7 @@ export class SuspiciousActivityDetector {
       // If last login was from far away location within short time
       if (recentLogins.length > 0) {
         const lastLogin = recentLogins[0];
-        const timeDiff = Date.now() - new Date(lastLogin.createdAt).getTime();
+        const timeDiff = Date.now() - new Date(lastLogin.createdAt || Date.now()).getTime();
         const hoursDiff = timeDiff / (1000 * 60 * 60);
 
         // If logged in from different country within 1 hour

@@ -578,6 +578,8 @@ function EmailClientInner() {
                 onFolderHover={(folderId) => {
                   queryClient.prefetchInfiniteQuery({
                     queryKey: ['/api/marketing/emails/threads', folderId, search.debouncedSearchQuery],
+                    initialPageParam: 1,
+                    getNextPageParam: (lastPage: any) => lastPage?.nextPage,
                   });
                 }}
                 onComposeClick={() => compose.openCompose()}

@@ -1,6 +1,5 @@
 import pino from 'pino';
 import { config } from '../config';
-import { logger } from './logger';
 
 // Redis stream for log aggregation (optional)
 let redisStream: any = null;
@@ -42,7 +41,7 @@ if (process.env.REDIS_LOGGING === 'true') {
     // Initialize after a short delay to ensure Redis is ready
     setTimeout(initRedisLogging, 1000);
   } catch (error) {
-    logger.warn({ context: error }, 'Redis logging setup failed:');
+    console.warn('Redis logging setup failed:', error);
   }
 }
 

@@ -97,7 +97,7 @@ export class AuthService {
             try {
               await storage.deleteEphemeralResumesByUser(uid);
             } catch (e) {
-              logger.warn(`[AuthService] Failed to delete ephemeral resumes for user ${uid}:`, e);
+              logger.warn({ err: e }, `[AuthService] Failed to delete ephemeral resumes for user ${uid}`);
             }
           }
         }
@@ -226,7 +226,7 @@ export class AuthService {
       logger.warn(`⚠️ SMTP transporter reported failure sending verification email to ${email}`);
       return { accepted: [], rejected: [email], messageId: 'smtp-failed', response: 'FAILED' } as any;
     } catch (error) {
-      logger.error(`❌ Failed to send verification email to ${email}:`, error);
+      logger.error({ err: error }, `❌ Failed to send verification email to ${email}`);
       return { accepted: [], rejected: [email], messageId: 'smtp-exception', response: String(error) } as any;
     }
   }
@@ -253,7 +253,7 @@ export class AuthService {
       logger.warn(`⚠️ SMTP transporter reported failure sending password reset email to ${email}`);
       return { accepted: [], rejected: [email], messageId: 'smtp-failed', response: 'FAILED' } as any;
     } catch (error) {
-      logger.error(`❌ Failed to send password reset email to ${email}:`, error);
+      logger.error({ err: error }, `❌ Failed to send password reset email to ${email}`);
       return { accepted: [], rejected: [email], messageId: 'smtp-exception', response: String(error) } as any;
     }
   }
@@ -274,7 +274,7 @@ export class AuthService {
       logger.warn(`⚠️ SMTP transporter reported failure sending 2FA email to ${email}`);
       return { accepted: [], rejected: [email], messageId: 'smtp-failed', response: 'FAILED' } as any;
     } catch (error) {
-      logger.error(`❌ Failed to send 2FA email to ${email}:`, error);
+      logger.error({ err: error }, `❌ Failed to send 2FA email to ${email}`);
       return { accepted: [], rejected: [email], messageId: 'smtp-exception', response: String(error) } as any;
     }
   }
@@ -363,7 +363,7 @@ export class AuthService {
       });
       logger.info(`✅ Pending approval email sent to ${email}`);
     } catch (error) {
-      logger.error(`❌ Failed to send pending approval email to ${email}:`, error);
+      logger.error({ err: error }, `❌ Failed to send pending approval email to ${email}`);
     }
   }
 
@@ -404,7 +404,7 @@ export class AuthService {
       });
       logger.info(`✅ Admin notification sent to ${adminEmail}`);
     } catch (error) {
-      logger.error(`❌ Failed to send admin notification:`, error);
+      logger.error({ err: error }, `❌ Failed to send admin notification`);
     }
   }
 
@@ -434,7 +434,7 @@ export class AuthService {
       });
       logger.info(`✅ Approval email sent to ${email}`);
     } catch (error) {
-      logger.error(`❌ Failed to send approval email to ${email}:`, error);
+      logger.error({ err: error }, `❌ Failed to send approval email to ${email}`);
     }
   }
 
@@ -463,7 +463,7 @@ export class AuthService {
       });
       logger.info(`✅ Rejection email sent to ${email}`);
     } catch (error) {
-      logger.error(`❌ Failed to send rejection email to ${email}:`, error);
+      logger.error({ err: error }, `❌ Failed to send rejection email to ${email}`);
     }
   }
 
@@ -509,7 +509,7 @@ export class AuthService {
       });
       logger.info(`✅ Suspicious login alert sent to admin`);
     } catch (error) {
-      logger.error(`❌ Failed to send suspicious login alert:`, error);
+      logger.error({ err: error }, `❌ Failed to send suspicious login alert`);
     }
   }
 
@@ -546,7 +546,7 @@ export class AuthService {
       });
       logger.info(`✅ New device login notification sent to ${email}`);
     } catch (error) {
-      logger.error(`❌ Failed to send new device notification to ${email}:`, error);
+      logger.error({ err: error }, `❌ Failed to send new device notification to ${email}`);
     }
   }
 }

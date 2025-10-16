@@ -321,8 +321,6 @@ export async function initializeDatabase(): Promise<void> {
     await initializeIndexes();
     
     logger.info({
-      maxConnections: MAX_CONNECTIONS,
-      minConnections: MIN_CONNECTIONS,
       ...getPoolStats()
     }, 'Database initialized successfully');
   } catch (error) {

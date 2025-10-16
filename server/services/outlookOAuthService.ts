@@ -252,7 +252,7 @@ export class OutlookOAuthService {
       
       return { success: true };
     } catch (error) {
-      logger.error(`❌ Outlook connection failed for ${account.emailAddress}:`, error);
+      logger.error({ err: error }, `❌ Outlook connection failed for ${account.emailAddress}`);
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown error' 

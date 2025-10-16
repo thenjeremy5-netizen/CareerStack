@@ -27,7 +27,7 @@ export const sessions = pgTable(
 );
 
 // User storage table with local authentication support
-export const users = pgTable("users", {
+export const users: any = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: varchar("email").notNull().unique(),
   password: varchar("password").notNull(),
