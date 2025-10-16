@@ -101,6 +101,7 @@ export class EmailSearchService {
       const isNegation = match[1] === '-';
       const value = match[2];
       if (isNegation) {
+        if (!parsed.negations) parsed.negations = {};
         parsed.negations.from = parsed.negations.from || [];
         parsed.negations.from.push(value);
       } else {
@@ -116,6 +117,7 @@ export class EmailSearchService {
       const isNegation = match[1] === '-';
       const value = match[2];
       if (isNegation) {
+        if (!parsed.negations) parsed.negations = {};
         parsed.negations.to = parsed.negations.to || [];
         parsed.negations.to.push(value);
       } else {
@@ -131,6 +133,7 @@ export class EmailSearchService {
       const isNegation = match[1] === '-' || match[3] === '-';
       const value = match[2] || match[4];
       if (isNegation) {
+        if (!parsed.negations) parsed.negations = {};
         parsed.negations.subject = parsed.negations.subject || [];
         parsed.negations.subject.push(value);
       } else {
@@ -146,6 +149,7 @@ export class EmailSearchService {
       const isNegation = match[1] === '-';
       const value = match[2];
       if (isNegation) {
+        if (!parsed.negations) parsed.negations = {};
         parsed.negations.has = parsed.negations.has || [];
         parsed.negations.has.push(value);
       } else {
@@ -161,6 +165,7 @@ export class EmailSearchService {
       const isNegation = match[1] === '-';
       const value = match[2];
       if (isNegation) {
+        if (!parsed.negations) parsed.negations = {};
         parsed.negations.is = parsed.negations.is || [];
         parsed.negations.is.push(value);
       } else {
@@ -333,7 +338,7 @@ export class EmailSearchService {
       let parsed: ParsedSearchQuery | undefined;
       if (options.query) {
         parsed = this.parseSearchQuery(options.query);
-        logger.debug('Parsed search query:', parsed);
+        logger.debug({ parsed }, 'Parsed search query');
       }
 
       // Build search conditions

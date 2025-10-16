@@ -198,7 +198,7 @@ export async function sendEmail(
       logger.info(`📧 Accepted: ${info.accepted?.length || 0}, Rejected: ${info.rejected?.length || 0}`);
       return true;
     } catch (primaryError) {
-      logger.error(`❌ Primary email provider failed (${provider}):`, primaryError);
+      logger.error({ provider, error: primaryError }, '❌ Primary email provider failed');
       // Try a simple fallback to generic SMTP credentials if available
       try {
         const fallbackSmtp = {

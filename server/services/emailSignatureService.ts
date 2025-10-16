@@ -191,11 +191,11 @@ export class EmailSignatureService {
       // In a real implementation, this would insert into the database
       const signatureId = `sig_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-      logger.info('Creating signature:', {
+      logger.info({
         id: signatureId,
         userId,
         ...signatureData
-      });
+      }, 'Creating signature');
 
       return {
         success: true,
@@ -315,7 +315,7 @@ export class EmailSignatureService {
   ): Promise<{ success: boolean; error?: string }> {
     try {
       // This would update the signature in the database
-      logger.info('Updating signature:', signatureId, updates);
+      logger.info({ signatureId, updates }, 'Updating signature');
       
       return { success: true };
     } catch (error) {
@@ -335,7 +335,7 @@ export class EmailSignatureService {
   ): Promise<{ success: boolean; error?: string }> {
     try {
       // This would delete the signature from the database
-      logger.info('Deleting signature:', signatureId);
+      logger.info({ signatureId }, 'Deleting signature');
       
       return { success: true };
     } catch (error) {

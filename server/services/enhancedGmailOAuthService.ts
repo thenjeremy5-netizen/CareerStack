@@ -143,7 +143,7 @@ export class EnhancedGmailOAuthService {
           .where(eq(emailAccounts.id, existingAccount.id))
           .returning();
 
-        logger.info(`✅ Updated Gmail account: ${userInfo.email}`);
+        logger.info({ email: userInfo.email }, '✅ Updated Gmail account');
         
         return {
           success: true,
@@ -168,7 +168,7 @@ export class EnhancedGmailOAuthService {
           syncEnabled: true,
         }).returning();
 
-        logger.info(`✅ Created new Gmail account: ${userInfo.email}`);
+        logger.info({ email: userInfo.email }, '✅ Created new Gmail account');
 
         return {
           success: true,
@@ -227,7 +227,7 @@ export class EnhancedGmailOAuthService {
         })
         .where(eq(emailAccounts.id, account.id));
 
-      logger.info(`✅ Refreshed access token for account: ${account.emailAddress}`);
+      logger.info({ emailAddress: account.emailAddress }, '✅ Refreshed access token for account');
 
       return credentials.access_token;
     } catch (error) {
@@ -316,7 +316,7 @@ export class EnhancedGmailOAuthService {
         gmail.users.getProfile({ userId: 'me' })
       );
       
-      logger.info(`✅ Gmail connection successful for ${account.emailAddress}. Messages: ${profile.data.messagesTotal}`);
+      logger.info({ emailAddress: account.emailAddress, messagesTotal: profile.data.messagesTotal }, '✅ Gmail connection successful');
       
       return { 
         success: true,
@@ -328,7 +328,7 @@ export class EnhancedGmailOAuthService {
         }
       };
     } catch (error) {
-      logger.error(`❌ Gmail connection failed for ${account.emailAddress}:`, error);
+      logger.error({ emailAddress: account.emailAddress, error }, '❌ Gmail connection failed');
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown error' 
@@ -356,7 +356,7 @@ export class EnhancedGmailOAuthService {
       // If we have a historyId, use incremental sync
       if (account.historyId) {
         try {
-          logger.debug(`📊 Using incremental sync for ${account.emailAddress} from historyId: ${account.historyId}`);
+          logger.debug({ emailAddress: account.emailAddress, historyId: account.historyId }, '📊 Using incremental sync');
           
           const historyResponse = await this.executeWithRetry(() =>
             gmail.users.history.list({
@@ -381,7 +381,7 @@ export class EnhancedGmailOAuthService {
             logger.debug(`✅ No new messages for ${account.emailAddress} (incremental)`);
             return {
               messages: [],
-              historyId: historyResponse.data.historyId,
+              historyId: historyResponse.data.historyId || '',
               fullSync: false
             };
           }
@@ -401,15 +401,15 @@ export class EnhancedGmailOAuthService {
               const parsedMessage = this.parseGmailMessage(fullMessage.data);
               if (parsedMessage) messages.push(parsedMessage);
             } catch (error) {
-              logger.warn(`Failed to fetch message ${messageId}:`, error);
+              logger.warn({ messageId, error }, 'Failed to fetch message');
             }
           }
 
-          logger.info(`✅ Incremental sync for ${account.emailAddress}: ${messages.length} new messages`);
+          logger.info({ emailAddress: account.emailAddress, messageCount: messages.length }, '✅ Incremental sync completed');
           
           return {
             messages,
-            historyId: historyResponse.data.historyId,
+            historyId: historyResponse.data.historyId || '',
             fullSync: false
           };
         } catch (error: any) {
@@ -417,7 +417,7 @@ export class EnhancedGmailOAuthService {
           if (error.code === 404 || error.message?.includes('history')) {
             logger.info(`⚠️  History expired for ${account.emailAddress}, performing full sync`);
           } else {
-            logger.warn(`⚠️  Incremental sync failed for ${account.emailAddress}, falling back to full sync:`, error);
+            logger.warn({ emailAddress: account.emailAddress, error }, '⚠️  Incremental sync failed, falling back to full sync');
           }
         }
       }
@@ -433,7 +433,7 @@ export class EnhancedGmailOAuthService {
       
       return {
         messages: result.messages,
-        historyId: profile.data.historyId,
+        historyId: profile.data.historyId || '',
         fullSync: true
       };
     } catch (error) {
@@ -551,7 +551,7 @@ export class EnhancedGmailOAuthService {
             fetchedMessages.push(parsedMessage);
           }
         } catch (error) {
-          logger.warn(`Failed to fetch message ${message.id}:`, error);
+          logger.warn({ messageId: message.id, error }, 'Failed to fetch message');
         }
       }
 
@@ -980,7 +980,7 @@ export class EnhancedGmailOAuthService {
           eq(emailAccounts.userId, userId)
         ));
 
-      logger.info(`✅ Deleted Gmail account: ${account.emailAddress}`);
+      logger.info({ emailAddress: account.emailAddress }, '✅ Deleted Gmail account');
 
       return { success: true };
     } catch (error) {

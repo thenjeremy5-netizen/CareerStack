@@ -4,7 +4,7 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
-import { RedisCache } from '../config/redis';
+import { CacheService } from '../config/redis';
 import { logger } from '../utils/logger';
 
 export interface RateLimitConfig {
@@ -60,7 +60,7 @@ export class AdvancedRateLimiter {
 
       // Intercept response to update counter
       const originalSend = res.send;
-      res.send = function (data: any) {
+      res.send = function (this: any, data: any) {
         const statusCode = res.statusCode;
         const shouldSkip =
           (this.config.skipSuccessfulRequests && statusCode < 400) ||
@@ -68,7 +68,7 @@ export class AdvancedRateLimiter {
 
         if (!shouldSkip) {
           // Don't await - let it run in background
-          RedisCache.incr(key).catch((error) =>
+          CacheService.incr(key).catch((error: any) =>
             logger.error({ error }, 'Failed to update rate limit')
           );
         }
@@ -95,11 +95,11 @@ export class AdvancedRateLimiter {
     const resetAt = now + this.config.windowMs;
 
     // Get current count
-    const current = await RedisCache.incr(key);
+    const current = await CacheService.incr(key);
 
     // Set expiry on first request
     if (current === 1) {
-      await RedisCache.set(key, current, Math.ceil(this.config.windowMs / 1000));
+      await CacheService.set(key, current, Math.ceil(this.config.windowMs / 1000));
     }
 
     return {
@@ -128,7 +128,7 @@ export class AdvancedRateLimiter {
    */
   async resetLimit(identifier: string): Promise<void> {
     const key = `${this.prefix}:${identifier}`;
-    await RedisCache.del(key);
+    await CacheService.del(key);
   }
 }
 

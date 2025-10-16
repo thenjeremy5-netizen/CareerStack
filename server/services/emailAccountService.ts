@@ -386,7 +386,7 @@ export class EmailAccountService {
         SUM(CASE WHEN DATE(sent_at) = CURRENT_DATE THEN 1 ELSE 0 END) as today_count
       FROM email_messages
       WHERE email_account_id = $1
-    `, [accountId]) as any;
+    `, [accountId]);
     
     const result = {
       totalEmails: parseInt(stats?.total_emails || '0'),
