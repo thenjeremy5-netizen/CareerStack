@@ -17,7 +17,7 @@ interface StatusConfig {
   label: string;
   variant: 'default' | 'secondary' | 'destructive' | 'outline';
   className: string;
-  icon?: React.ComponentType<{ size?: number; className?: string }>;
+  icon?: React.ComponentType<any>;
   pulse?: boolean;
 }
 

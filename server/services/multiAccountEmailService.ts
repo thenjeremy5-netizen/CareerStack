@@ -226,7 +226,7 @@ export class MultiAccountEmailService {
       logger.info(`✅ SMTP connection successful for ${account.emailAddress}`);
       return { success: true };
     } catch (error) {
-      logger.error(`❌ SMTP connection failed for ${account.emailAddress}:`, error);
+      logger.error({ err: error }, `❌ SMTP connection failed for ${account.emailAddress}`);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'SMTP connection failed'
@@ -396,7 +396,7 @@ export class MultiAccountEmailService {
           await new Promise(resolve => setTimeout(resolve, delay));
           logger.debug(`Retrying message save (attempt ${attempt + 2}/${retries + 1})`);
         } else {
-          logger.warn(`Failed to save message ${message.externalMessageId} after ${retries + 1} attempts:`, error);
+          logger.warn({ err: error }, `Failed to save message ${message.externalMessageId} after ${retries + 1} attempts`);
           return false;
         }
       }

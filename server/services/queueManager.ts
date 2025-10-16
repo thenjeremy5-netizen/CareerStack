@@ -221,7 +221,6 @@ export class QueueManager {
     
     return queue.add('bulk-operation', data, {
       priority: 3,
-      timeout: 120000, // 2 minutes timeout
     });
   }
   
@@ -301,10 +300,7 @@ export class QueueManager {
           // Import sync service dynamically
           const { EmailSyncService } = await import('./emailSyncService');
           
-          const result = await EmailSyncService.syncAccount(accountId, {
-            fullSync,
-            since,
-          });
+          const result = await EmailSyncService.syncAccountOnDemand(accountId, job.data.userId || '');
           
           logger.info({ 
             jobId: job.id, 

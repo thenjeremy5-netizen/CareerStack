@@ -1274,7 +1274,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await storage.updateResumeStatus(update.resumeId, "customized");
           return { resumeId: update.resumeId, success: true };
         } catch (error) {
-          logger.error(`Failed to save resume ${update.resumeId}:`, error);
+          logger.error({ err: error }, `Failed to save resume ${update.resumeId}`);
           return { resumeId: update.resumeId, success: false, error: error instanceof Error ? error.message : "Unknown error" };
         }
       });
@@ -1409,7 +1409,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Queue for background processing
           queueBackground = true;
         } catch (error) {
-          logger.error(`File validation failed ${file.originalname}:`, error);
+          logger.error({ err: error }, `File validation failed ${file.originalname}`);
           throw error;
         }
         
@@ -1608,7 +1608,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           return { resumeId, success: true, pointGroups: pointGroupsBatchData.length };
         } catch (error) {
-          logger.error(`Failed to process resume ${resumeId}:`, error);
+          logger.error({ err: error }, `Failed to process resume ${resumeId}`);
           return { resumeId, success: false, error: error instanceof Error ? error.message : "Unknown error" };
         }
       });
@@ -1940,7 +1940,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await storage.updateResumeStatus(update.resumeId, "customized");
           return { resumeId: update.resumeId, success: true };
         } catch (error) {
-          logger.error(`Failed to save resume ${update.resumeId}:`, error);
+          logger.error({ err: error }, `Failed to save resume ${update.resumeId}`);
           return { resumeId: update.resumeId, success: false, error: error instanceof Error ? error.message : "Unknown error" };
         }
       });

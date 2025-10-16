@@ -2,7 +2,6 @@ import { logger } from './logger';
 import { redisService } from '../services/redis';
 import { withRetry } from './error-recovery';
 import { performance } from 'perf_hooks';
-import { logger } from './logger';
 
 // Helper to extract a safe error message
 const getErrorMessage = (error: unknown): string => {
@@ -580,14 +579,14 @@ export const registerBuiltInProcessors = () => {
       }
       
     } catch (error) {
-      logger.error(`DOCX processing failed for job ${job.id}:`, error);
+      logger.error({ err: error }, `DOCX processing failed for job ${job.id}`);
       
       // Update resume status to indicate failure
       try {
         const { storage } = await import('../storage');
         await storage.updateResumeStatus(job.payload.resumeId, "error");
       } catch (statusError) {
-        logger.error({ error: statusError }, 'Failed to update resume status to error:');
+        logger.error({ err: statusError }, 'Failed to update resume status to error');
       }
       
       return {

@@ -28,13 +28,13 @@ export async function logAudit(entry: AuditLogEntry): Promise<void> {
     // Note: This requires the audit_logs table to exist
     // For now, we'll log to console and database if table exists
     
-    logger.info('📋 Audit Log:', {
+    logger.info({
       timestamp: new Date().toISOString(),
       userId: entry.userId,
       action: entry.action,
       entity: `${entry.entityType}/${entry.entityId}`,
       ip: entry.ipAddress,
-    });
+    }, '📋 Audit Log');
     
     // Try to insert into database (will fail silently if table doesn't exist)
     try {

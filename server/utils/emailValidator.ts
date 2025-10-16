@@ -72,7 +72,7 @@ export class EmailValidator {
       }
     } catch (error) {
       // If DNS check fails, we'll still allow the email
-      logger.warn(`DNS check failed for ${domain}:`, error);
+      logger.warn({ err: error }, `DNS check failed for ${domain}`);
     }
 
     return { isValid: true };

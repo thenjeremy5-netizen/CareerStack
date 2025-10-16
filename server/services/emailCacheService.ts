@@ -31,7 +31,7 @@ export class EmailCacheService {
       const key = this.getCacheKey('threads', userId, folder);
       const ttl = options.ttl || this.THREAD_LIST_TTL;
       
-      await redisClient.set(
+      await redisClient.getClient().set(
         key,
         JSON.stringify(threads),
         'EX',
@@ -50,7 +50,7 @@ export class EmailCacheService {
   static async getThreadList(userId: string, folder: string): Promise<any[] | null> {
     try {
       const key = this.getCacheKey('threads', userId, folder);
-      const cached = await redisClient.get(key);
+      const cached = await redisClient.getClient().get(key);
       
       if (cached) {
         logger.debug(`📊 Cache hit for threads ${userId}/${folder}`);
@@ -77,7 +77,7 @@ export class EmailCacheService {
       const key = this.getCacheKey('message', messageId);
       const ttl = options.ttl || this.MESSAGE_TTL;
       
-      await redisClient.set(
+      await redisClient.getClient().set(
         key,
         JSON.stringify(message),
         'EX',
@@ -96,7 +96,7 @@ export class EmailCacheService {
   static async getMessage(messageId: string): Promise<any | null> {
     try {
       const key = this.getCacheKey('message', messageId);
-      const cached = await redisClient.get(key);
+      const cached = await redisClient.getClient().get(key);
       
       if (cached) {
         logger.debug(`📊 Cache hit for message ${messageId}`);
@@ -123,7 +123,7 @@ export class EmailCacheService {
       const key = this.getCacheKey('thread', threadId);
       const ttl = options.ttl || this.DEFAULT_TTL;
       
-      await redisClient.set(
+      await redisClient.getClient().set(
         key,
         JSON.stringify(thread),
         'EX',
@@ -142,7 +142,7 @@ export class EmailCacheService {
   static async getThread(threadId: string): Promise<any | null> {
     try {
       const key = this.getCacheKey('thread', threadId);
-      const cached = await redisClient.get(key);
+      const cached = await redisClient.getClient().get(key);
       
       if (cached) {
         logger.debug(`📊 Cache hit for thread ${threadId}`);
@@ -169,7 +169,7 @@ export class EmailCacheService {
       const key = this.getCacheKey('sync', accountId);
       const ttl = options.ttl || 30; // 30 seconds for sync status
       
-      await redisClient.set(
+      await redisClient.getClient().set(
         key,
         JSON.stringify(status),
         'EX',
@@ -188,7 +188,7 @@ export class EmailCacheService {
   static async getAccountSyncStatus(accountId: string): Promise<any | null> {
     try {
       const key = this.getCacheKey('sync', accountId);
-      const cached = await redisClient.get(key);
+      const cached = await redisClient.getClient().get(key);
       
       if (cached) {
         return JSON.parse(cached);
@@ -207,10 +207,10 @@ export class EmailCacheService {
   static async invalidateUserCache(userId: string): Promise<void> {
     try {
       const pattern = this.getCacheKey('threads', userId, '*');
-      const keys = await redisClient.keys(pattern);
+      const keys = await redisClient.getClient().keys(pattern);
       
       if (keys.length > 0) {
-        await redisClient.del(...keys);
+        await redisClient.getClient().del(...keys);
         logger.debug(`🗑️  Invalidated ${keys.length} cache entries for user ${userId}`);
       }
     } catch (error) {
@@ -224,7 +224,7 @@ export class EmailCacheService {
   static async invalidateThread(threadId: string): Promise<void> {
     try {
       const key = this.getCacheKey('thread', threadId);
-      await redisClient.del(key);
+      await redisClient.getClient().del(key);
       logger.debug(`🗑️  Invalidated cache for thread ${threadId}`);
     } catch (error) {
       logger.error({ error: error }, 'Failed to invalidate thread cache:');
@@ -237,7 +237,7 @@ export class EmailCacheService {
   static async invalidateMessage(messageId: string): Promise<void> {
     try {
       const key = this.getCacheKey('message', messageId);
-      await redisClient.del(key);
+      await redisClient.getClient().del(key);
       logger.debug(`🗑️  Invalidated cache for message ${messageId}`);
     } catch (error) {
       logger.error({ error: error }, 'Failed to invalidate message cache:');
@@ -250,10 +250,10 @@ export class EmailCacheService {
   static async clearAll(): Promise<void> {
     try {
       const pattern = `${this.PREFIX}*`;
-      const keys = await redisClient.keys(pattern);
+      const keys = await redisClient.getClient().keys(pattern);
       
       if (keys.length > 0) {
-        await redisClient.del(...keys);
+        await redisClient.getClient().del(...keys);
         logger.info(`🗑️  Cleared ${keys.length} email cache entries`);
       }
     } catch (error) {
@@ -271,7 +271,7 @@ export class EmailCacheService {
     syncKeys: number;
   }> {
     try {
-      const allKeys = await redisClient.keys(`${this.PREFIX}*`);
+      const allKeys = await redisClient.getClient().keys(`${this.PREFIX}*`);
       const threadKeys = allKeys.filter(k => k.includes(':threads:')).length;
       const messageKeys = allKeys.filter(k => k.includes(':message:')).length;
       const syncKeys = allKeys.filter(k => k.includes(':sync:')).length;

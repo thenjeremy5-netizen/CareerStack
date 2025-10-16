@@ -7,7 +7,7 @@ import {
 } from 'drizzle-orm';
 import { isAuthenticated } from '../localAuth';
 import { 
-  writeOperationsRateLimiter 
+  bulkOperationsRateLimiter 
 } from '../middleware/rateLimiter';
 import { csrfProtection } from '../middleware/csrf';
 import { logCreate, logUpdate, logDelete } from '../utils/auditLogger';
@@ -69,7 +69,7 @@ router.get('/requirements/:id/next-step-comments', async (req, res) => {
 });
 
 // Add next step comment to a requirement
-router.post('/requirements/:id/next-step-comments', conditionalCSRF, writeOperationsRateLimiter, async (req, res) => {
+router.post('/requirements/:id/next-step-comments', conditionalCSRF, bulkOperationsRateLimiter, async (req, res) => {
   try {
     const { id } = req.params;
     const { comment } = req.body;
@@ -120,7 +120,7 @@ router.post('/requirements/:id/next-step-comments', conditionalCSRF, writeOperat
 });
 
 // Update next step comment
-router.patch('/next-step-comments/:id', conditionalCSRF, writeOperationsRateLimiter, async (req, res) => {
+router.patch('/next-step-comments/:id', conditionalCSRF, bulkOperationsRateLimiter, async (req, res) => {
   try {
     const { id } = req.params;
     const { comment } = req.body;
@@ -173,7 +173,7 @@ router.patch('/next-step-comments/:id', conditionalCSRF, writeOperationsRateLimi
 });
 
 // Delete next step comment
-router.delete('/next-step-comments/:id', conditionalCSRF, writeOperationsRateLimiter, async (req, res) => {
+router.delete('/next-step-comments/:id', conditionalCSRF, bulkOperationsRateLimiter, async (req, res) => {
   try {
     const { id } = req.params;
 

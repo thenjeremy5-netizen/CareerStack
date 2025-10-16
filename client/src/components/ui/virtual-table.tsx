@@ -212,7 +212,7 @@ export function VirtualTable<T extends Record<string, any>>({
           <div className="w-12 flex items-center justify-center">
             <Checkbox
               checked={isAllSelected}
-              ref={(el) => {
+              ref={(el: any) => {
                 if (el) el.indeterminate = isIndeterminate;
               }}
               onCheckedChange={handleSelectAll}

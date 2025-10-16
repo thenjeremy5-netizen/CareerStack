@@ -2,7 +2,7 @@ import { useQuery, useQueryClient, UseQueryOptions } from '@tanstack/react-query
 import { useCallback, useMemo } from 'react';
 import { apiRequest } from '@/lib/queryClient';
 
-interface OptimizedQueryOptions<T> extends Omit<UseQueryOptions<T>, 'queryKey' | 'queryFn'> {
+interface OptimizedQueryOptions<T> extends Omit<UseQueryOptions<T>, 'queryKey' | 'queryFn' | 'select'> {
   endpoint: string;
   params?: Record<string, any>;
   select?: string[]; // Fields to select for reduced payload
@@ -24,14 +24,14 @@ export function useOptimizedQuery<T = any>({
 
   // Create optimized query key
   const queryKey = useMemo(() => {
-    const baseKey = [endpoint];
+    const baseKey: any[] = [endpoint];
     if (Object.keys(params).length > 0) {
       baseKey.push(params);
     }
     if (select && select.length > 0) {
       baseKey.push({ select: select.join(',') });
     }
-    return baseKey;
+    return baseKey as readonly unknown[];
   }, [endpoint, params, select]);
 
   // Optimized query function with field selection
@@ -66,7 +66,7 @@ export function useOptimizedQuery<T = any>({
     queryKey,
     queryFn,
     staleTime: 5 * 60 * 1000, // 5 minutes
-    cacheTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
     refetchOnWindowFocus: backgroundRefetch,
     refetchOnMount: false,
     refetchOnReconnect: true,
@@ -160,10 +160,10 @@ export function useInfiniteOptimizedQuery<T = any>({
 
   return useQuery({
     queryKey,
-    queryFn: async ({ pageParam = 1 }) => {
+    queryFn: async () => {
       const searchParams = new URLSearchParams({
         ...params,
-        page: String(pageParam),
+        page: '1',
         limit: String(pageSize),
       });
 
@@ -174,13 +174,7 @@ export function useInfiniteOptimizedQuery<T = any>({
       const response = await apiRequest('GET', `${endpoint}?${searchParams.toString()}`);
       return response.json();
     },
-    getNextPageParam: (lastPage: any) => {
-      if (lastPage.pagination && lastPage.pagination.hasMore) {
-        return lastPage.pagination.page + 1;
-      }
-      return undefined;
-    },
     staleTime: 2 * 60 * 1000,
-    cacheTime: 5 * 60 * 1000,
+    gcTime: 5 * 60 * 1000,
   });
 }
