@@ -404,7 +404,7 @@ export class BulkOperations {
       });
 
       const batchResults = await Promise.all(batchPromises);
-      results.push(...batchResults.filter((result): result is R => result !== null));
+      results.push(...batchResults.filter((result): result is Awaited<R> => result !== null));
 
       onProgress?.(Math.min(i + batchSize, items.length), items.length);
 

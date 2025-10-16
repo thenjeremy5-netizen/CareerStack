@@ -47,7 +47,7 @@ export class EmailWebSocketManager {
         const message = JSON.parse(data.toString());
         this.handleMessage(connectionId, message);
       } catch (error) {
-        logger.error('Error handling WebSocket message:', error);
+        logger.error({ error }, 'Error handling WebSocket message');
       }
     });
 
@@ -56,12 +56,12 @@ export class EmailWebSocketManager {
     });
 
     ws.on('error', (error) => {
-      logger.error(`WebSocket error for connection ${connectionId}:`, error);
+      logger.error({ connectionId, error }, 'WebSocket error for connection');
       this.removeConnection(connectionId);
     });
 
     this.connections.set(connectionId, connection);
-    logger.info(`WebSocket connection added: ${connectionId} for user ${userId}`);
+    logger.info({ connectionId, userId }, 'WebSocket connection added');
   }
 
   removeConnection(connectionId: string) {
@@ -76,7 +76,7 @@ export class EmailWebSocketManager {
       }
 
       this.connections.delete(connectionId);
-      logger.info(`WebSocket connection removed: ${connectionId}`);
+      logger.info({ connectionId }, 'WebSocket connection removed');
     }
   }
 
@@ -113,7 +113,7 @@ export class EmailWebSocketManager {
       try {
         connection.ws.send(JSON.stringify(message));
       } catch (error) {
-        logger.error(`Error sending message to ${connectionId}:`, error);
+        logger.error({ connectionId, error }, 'Error sending message');
       }
     }
   }
@@ -155,7 +155,7 @@ export class EmailWebSocketManager {
     });
 
     staleConnections.forEach(connectionId => {
-      logger.warn(`Removing stale connection: ${connectionId}`);
+      logger.warn({ connectionId }, 'Removing stale connection');
       this.removeConnection(connectionId);
     });
 

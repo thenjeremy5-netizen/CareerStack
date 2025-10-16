@@ -90,11 +90,11 @@ export class DatabaseStorage implements IStorage {
         },
       })
       .returning();
-    return result[0];
+    return (result as any)[0];
   }
 
   async createUser(email: string, hashedPassword: string): Promise<User> {
-    const [user] = await db
+    const result = await db
       .insert(users)
       .values({
         id: randomUUID(),
@@ -104,6 +104,7 @@ export class DatabaseStorage implements IStorage {
         updatedAt: new Date(),
       })
       .returning();
+    const user = (result as any)[0];
     return user;
   }
 

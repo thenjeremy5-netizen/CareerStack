@@ -574,7 +574,7 @@ export const registerBuiltInProcessors = () => {
           processingTime: performance.now() - startTime
         };
       } catch (fileError) {
-        logger.error(`Failed to read DOCX file for resume ${resumeId}:`, fileError);
+        logger.error({ resumeId, error: fileError }, 'Failed to read DOCX file');
         throw new Error(`Failed to read DOCX file: ${fileError instanceof Error ? fileError.message : 'Unknown error'}`);
       }
       

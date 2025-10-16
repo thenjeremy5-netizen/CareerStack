@@ -111,7 +111,7 @@ export function configureProductionMiddleware(app: Express, config: ProductionCo
   // Response compression
   if (config.enableCompression) {
     app.use(compression({
-      filter: (req, res) => {
+      filter: (req: any, res: any) => {
         if (req.headers['x-no-compression']) {
           return false;
         }

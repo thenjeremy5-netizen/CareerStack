@@ -85,7 +85,7 @@ async function checkRateLimitRedis(
     );
     
     // Get count from results (index 1 is the zcard result)
-    const current = results[1][1] as number;
+    const current = (results as any)[1][1] as number;
     const allowed = current < max;
     const resetTime = now + windowMs;
     
@@ -207,7 +207,7 @@ export function createRateLimiter(config: RateLimitConfig) {
             logger.debug({ key, statusCode }, 'Skipping rate limit count for this response');
           }
           
-          return originalEnd.apply(res, args);
+          return originalEnd.apply(res, args as [chunk: any, encoding: BufferEncoding, cb?: (() => void) | undefined]);
         };
       }
       

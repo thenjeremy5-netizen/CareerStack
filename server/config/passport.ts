@@ -1,6 +1,6 @@
 import { Strategy as LocalStrategy } from 'passport-local';
 import { db } from '../db';
-import { users } from '@shared/schema';
+import { users, User } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import { compare } from 'bcryptjs';
 import { logger } from '../utils/logger';
@@ -74,7 +74,7 @@ export function configurePassport(passport: any) {
 
           // Return user without password
           const { password: _, ...userWithoutPassword } = user;
-          return done(null, userWithoutPassword);
+          return done(null, userWithoutPassword as User);
         } catch (error) {
           logger.error({ error: error }, 'Passport error:');
           return done(error);
