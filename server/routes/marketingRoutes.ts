@@ -347,20 +347,29 @@ router.use(marketingRateLimiter);
 
 // Helper functions for generating display IDs
 async function generateConsultantDisplayId(): Promise<string> {
-  const result = await db.select({ count: sql<number>`count(*)` }).from(consultants);
-  const nextNumber = (result[0]?.count || 0) + 1;
+  // Get the maximum ID number currently in use
+  const result = await db.select({ 
+    maxId: sql<number>`COALESCE(MAX(CAST(SUBSTRING(display_id FROM 11) AS INTEGER)), 0)` 
+  }).from(consultants);
+  const nextNumber = result[0]?.maxId + 1;
   return `CONST ID - ${nextNumber}`;
 }
 
 async function generateRequirementDisplayId(): Promise<string> {
-  const result = await db.select({ count: sql<number>`count(*)` }).from(requirements);
-  const nextNumber = (result[0]?.count || 0) + 1;
+  // Get the maximum ID number currently in use
+  const result = await db.select({ 
+    maxId: sql<number>`COALESCE(MAX(CAST(SUBSTRING(display_id FROM 9) AS INTEGER)), 0)` 
+  }).from(requirements);
+  const nextNumber = result[0]?.maxId + 1;
   return `REQ ID - ${nextNumber}`;
 }
 
 async function generateInterviewDisplayId(): Promise<string> {
-  const result = await db.select({ count: sql<number>`count(*)` }).from(interviews);
-  const nextNumber = (result[0]?.count || 0) + 1;
+  // Get the maximum ID number currently in use
+  const result = await db.select({ 
+    maxId: sql<number>`COALESCE(MAX(CAST(SUBSTRING(display_id FROM 9) AS INTEGER)), 0)` 
+  }).from(interviews);
+  const nextNumber = result[0]?.maxId + 1;
   return `INT ID - ${nextNumber}`;
 }
 

@@ -8,6 +8,7 @@ import { authGlobalState } from '@/lib/authGlobalState';
 export interface User {
   id: string;
   email: string;
+  pseudoName?: string;
   firstName?: string;
   lastName?: string;
   profileImageUrl?: string;
@@ -30,27 +31,38 @@ export function useAuth() {
       try {
         // Record that we're making an auth request
         authGlobalState.recordAuthRequest();
-        
+
         const response = await fetch("/api/auth/user", {
           credentials: "include",
           headers: {
             "X-Requested-With": "XMLHttpRequest"
-          }
+          },
+          redirect: 'manual' // Don't follow redirects automatically
         });
+
+        // Handle redirects manually
+        if (response.status === 302 || response.status === 301) {
+          throw new Error("UNAUTHORIZED");
+        }
 
         if (!response.ok) {
           if (response.status === 401 || response.status === 403) {
             throw new Error("UNAUTHORIZED");
+          }
+          if (response.status === 404) {
+            throw new Error("USER_NOT_FOUND");
           }
           throw new Error(`HTTP_${response.status}`);
         }
 
         const data = await response.json();
         authCircuitBreaker.recordSuccess();
-        
+
         // Clear any auth loop flags on successful authentication
         localStorage.removeItem('authLoopDetected');
         localStorage.removeItem('lastAuthLoopReset');
+        localStorage.removeItem('lastAuthRedirect');
+        localStorage.removeItem('lastPrivateRedirect');
         
         return data as User;
       } catch (error: any) {
@@ -59,26 +71,36 @@ export function useAuth() {
           throw new Error("NETWORK_ERROR");
         }
         
-        authCircuitBreaker.recordFailure();
+        // Only record failures for actual network/server errors, not auth failures
+        if (error.message === 'NETWORK_ERROR') {
+          authCircuitBreaker.recordFailure();
+        }
         throw error;
       }
     },
-    retry: false,
-    retryDelay: 0,
-    staleTime: 30 * 1000, // 30 seconds - longer to reduce requests during startup
+    retry: (failureCount, error) => {
+      // Don't retry auth errors
+      if (error.message === 'UNAUTHORIZED' || error.message === 'USER_NOT_FOUND') {
+        return false;
+      }
+      // Retry network errors up to 2 times
+      return failureCount < 2;
+    },
+    retryDelay: 1000,
+    staleTime: 30 * 1000, // 30 seconds
     gcTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     refetchInterval: false,
-    refetchOnMount: 'always', // Always check auth on mount but React Query will deduplicate
-    enabled: !isDisabled && !shouldPreventAuth, // Disable if any safety check fails
+    refetchOnMount: true,
+    enabled: !isDisabled && !shouldPreventAuth,
   });
 
   // Simplified error handling to prevent loops
   React.useEffect(() => {
     if (error && error.message) {
       const path = window.location.pathname;
-      const onAuthPages = ['/login', '/register', '/verify-email', '/'].includes(path);
+      const onAuthPages = ['/login', '/register', '/verify-email', '/', '/privacy'].includes(path);
       
       // Only handle auth errors, ignore others to prevent loops
       if (error.message === 'UNAUTHORIZED' && !onAuthPages) {
@@ -87,34 +109,61 @@ export function useAuth() {
         
         // Simple throttled redirect
         const lastRedirect = localStorage.getItem('lastAuthRedirect');
-        const now = Date.now().toString();
+        const now = Date.now();
         
-        if (!lastRedirect || (Date.now() - parseInt(lastRedirect)) > 3000) {
-          localStorage.setItem('lastAuthRedirect', now);
+        if (!lastRedirect || (now - parseInt(lastRedirect)) > 5000) {
+          localStorage.setItem('lastAuthRedirect', now.toString());
           // Clear the query data to prevent stale state
           queryClient.setQueryData(["/api/auth/user"], null);
+          // Only store redirect path for non-dashboard pages to prevent unwanted redirects
+          if (path !== '/dashboard') {
+            localStorage.setItem('redirectAfterLogin', path);
+          } else {
+            localStorage.removeItem('redirectAfterLogin');
+          }
           window.location.href = '/login';
         }
       }
     }
-  }, [error, queryClient, setIsDisabled]);
+  }, [error, queryClient]);
 
   // Define clearLocalSession outside of logout to make it reusable
   const clearLocalSession = async () => {
     try {
       queryClient.clear();
+      
+      // Clear all auth-related localStorage
+      const keysToRemove = Object.keys(localStorage).filter(key =>
+        key.includes('auth') || 
+        key.includes('user') || 
+        key.includes('session') || 
+        key.includes('token') ||
+        key.includes('lastActiveTime') ||
+        key.includes('rcp_') ||
+        key.includes('lastAuthRedirect') ||
+        key.includes('authLoopDetected') ||
+        key.includes('lastAuthLoopReset')
+      );
+      
+      keysToRemove.forEach(key => localStorage.removeItem(key));
+      
+      // Clear session storage
+      sessionStorage.clear();
+      
+      // Clear all cookies
+      document.cookie.split(";").forEach((c) => {
+        document.cookie = c
+          .replace(/^ +/, "")
+          .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+      });
+      
       await clearAllClientAuthData({ preservePreferences: true });
     } catch (e) {
       console.error('Error clearing local session:', e);
-      // Fallback to previous behavior
+      // Fallback cleanup
       queryClient.clear();
-      localStorage.removeItem('lastActiveTime');
+      localStorage.clear();
       sessionStorage.clear();
-      document.cookie.split(';').forEach((c) => {
-        document.cookie = c
-          .replace(/^ +/, '')
-          .replace(/=.*/, `=;expires=${new Date().toUTCString()};path=/`);
-      });
     }
   };
 
@@ -127,52 +176,53 @@ export function useAuth() {
         duration: 1000,
       });
 
-      // Make server logout call first
       const csrfToken = document.cookie
         .split('; ')
         .find(row => row.startsWith('csrf_token='))
         ?.split('=')[1];
 
-      // Fire and forget - don't await this
-      fetch("/api/auth/logout", {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRF-Token": csrfToken || "",
-        }
-      }).catch(() => {
-        // Ignore server errors during logout
-        console.log("Server logout failed, but local session cleared");
-      });
+      // Wait for server logout to complete
+      try {
+        await fetch("/api/auth/logout", {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRF-Token": csrfToken || "",
+          },
+          timeout: 5000, // 5 second timeout
+        });
+      } catch (serverError) {
+        console.warn("Server logout failed, proceeding with local cleanup:", serverError);
+      }
 
-      // Clear local session data
+      // Clear local session data after server logout
       await clearLocalSession();
       
       // Clear query cache
       queryClient.setQueryData(["/api/auth/user"], null);
       queryClient.clear();
       
-      // Use setTimeout to ensure all state updates are processed
-      setTimeout(() => {
-        window.location.href = "/";
-      }, 100);
+      // Redirect after cleanup is complete
+      window.location.href = "/";
       
     } catch (error) {
       console.error("Logout error:", error);
       
-      // Even on error, clear everything and redirect
+      // Even on error, clear everything and redirect for security
       try {
         await clearLocalSession();
         queryClient.setQueryData(["/api/auth/user"], null);
         queryClient.clear();
       } catch (e) {
         console.error("Error during cleanup:", e);
+        // Force clear everything as fallback
+        localStorage.clear();
+        sessionStorage.clear();
+        queryClient.clear();
       }
       
-      setTimeout(() => {
-        window.location.href = "/";
-      }, 100);
+      window.location.href = "/";
     }
   };
 
@@ -235,14 +285,14 @@ export function useAuth() {
     };
   }, [user]); // Depend on user so it resets when authentication state changes
 
-  // If auth is prevented, return unauthenticated state
+  // If auth is prevented by circuit breaker, return unauthenticated state
   if (shouldPreventAuth) {
     return {
       user: null,
       isLoading: false,
       isAuthenticated: false,
-      isAuthChecked: true, // Auth is prevented, so consider it checked
-      error: null,
+      isAuthChecked: true,
+      error: { message: 'CIRCUIT_BREAKER_OPEN' } as any,
       logout: async () => {},
       refreshUser: async () => {},
     };

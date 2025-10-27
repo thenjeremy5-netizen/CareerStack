@@ -10,39 +10,41 @@ interface PrivateRouteProps {
 }
 
 export const PrivateRoute: React.FC<PrivateRouteProps> = ({ path, component: Component }) => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, isAuthChecked, error } = useAuth();
   const [, setLocation] = useLocation();
   const [hasRedirected, setHasRedirected] = React.useState(false);
   
   // Redirect logic that respects navigation and doesn't interfere with back button
   React.useEffect(() => {
-    // Only redirect if we're sure the user is not authenticated
-    // Add a small delay to allow auth state to stabilize after navigation
-    const redirectTimer = setTimeout(() => {
-      if (!isLoading && !isAuthenticated && !hasRedirected) {
-        // Don't redirect during navigation (back button, etc.)
-        if (NavigationHelper.shouldPreventAuthRedirect()) {
-          return;
-        }
-        
-        const currentPath = window.location.pathname;
-        
-        // More conservative throttling - don't redirect if we just did
-        const lastRedirect = localStorage.getItem('lastPrivateRedirect');
-        const now = Date.now();
-        
-        // Throttle redirects to prevent loops (3 second cooldown)
-        if (!lastRedirect || (now - parseInt(lastRedirect)) > 3000) {
-          localStorage.setItem('lastPrivateRedirect', now.toString());
-          localStorage.setItem('redirectAfterLogin', currentPath);
-          setHasRedirected(true);
-          setLocation('/login');
-        }
-      }
-    }, 100); // Faster redirect for better UX
+    // Check if we should redirect - either auth is checked and user not authenticated,
+    // or circuit breaker is open (which means we can't verify auth)
+    const shouldRedirect = (isAuthChecked && !isAuthenticated) || 
+                          (error?.message === 'CIRCUIT_BREAKER_OPEN');
     
-    return () => clearTimeout(redirectTimer);
-  }, [isAuthenticated, isLoading, hasRedirected, setLocation]);
+    if (shouldRedirect && !hasRedirected) {
+      // Don't redirect during navigation (back button, etc.)
+      if (NavigationHelper.shouldPreventAuthRedirect()) {
+        return;
+      }
+      
+      const currentPath = window.location.pathname;
+      
+      // More conservative throttling - don't redirect if we just did
+      const lastRedirect = localStorage.getItem('lastPrivateRedirect');
+      const now = Date.now();
+      
+      // Throttle redirects to prevent loops (2 second cooldown)
+      if (!lastRedirect || (now - parseInt(lastRedirect)) > 2000) {
+        localStorage.setItem('lastPrivateRedirect', now.toString());
+        // Don't store redirect path for dashboard to prevent redirect loops
+        if (currentPath !== '/dashboard') {
+          localStorage.setItem('redirectAfterLogin', currentPath);
+        }
+        setHasRedirected(true);
+        setLocation('/login');
+      }
+    }
+  }, [isAuthenticated, isAuthChecked, hasRedirected, setLocation, error]);
 
   return (
     <Route
@@ -53,8 +55,26 @@ export const PrivateRoute: React.FC<PrivateRouteProps> = ({ path, component: Com
           return <Component {...props} />;
         }
         
-        // Show minimal loader while checking auth or redirecting
-        if (isLoading || !isAuthenticated) {
+        // If circuit breaker is open, show loader and redirect
+        if (error?.message === 'CIRCUIT_BREAKER_OPEN') {
+          return (
+            <div className="flex items-center justify-center min-h-screen">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          );
+        }
+        
+        // Show minimal loader while checking auth
+        if (isLoading || !isAuthChecked) {
+          return (
+            <div className="flex items-center justify-center min-h-screen">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          );
+        }
+
+        // If auth is checked and user is not authenticated, show loader while redirecting
+        if (!isAuthenticated) {
           return (
             <div className="flex items-center justify-center min-h-screen">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>

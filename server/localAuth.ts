@@ -503,42 +503,7 @@ export async function setupAuth(app: Express) {
       .where(eq(users.id, userId));
   }
 
-  // Serialize user into the session
-  passport.serializeUser((user: Express.User, done) => {
-    done(null, { id: user.id });
-  });
-
-  passport.deserializeUser(async (serialized: { id: string }, done) => {
-    try {
-      if (!serialized?.id) {
-        return done(new Error('Invalid session data'));
-      }
-
-      // Find the user in the database
-      const user = await db.query.users.findFirst({
-        where: (users, { eq }) => eq(users.id, serialized.id)
-      });
-
-      if (!user) {
-        return done(null, false);
-      }
-
-      // Remove sensitive information before storing in session
-      const safeUser = {
-        id: user.id,
-        email: user.email,
-        emailVerified: user.emailVerified,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role || 'user' // Include role in session
-      };
-
-      return done(null, safeUser);
-    } catch (error) {
-      logger.error({ error: error }, 'Deserialize user error:');
-      done(error);
-    }
-  });
+  // Passport serialization is handled in passport config
 }
 
 // Helper function to hash passwords with stronger salt
@@ -549,6 +514,15 @@ export async function hashPassword(password: string): Promise<string> {
 
 
 export function isAuthenticated(req: Request, res: Response, next: NextFunction) {
+  logger.info('isAuthenticated middleware:', {
+    path: req.path,
+    method: req.method,
+    sessionID: req.sessionID,
+    hasUser: !!req.user,
+    isAuthenticated: req.isAuthenticated?.(),
+    cookies: req.headers.cookie?.substring(0, 50) + '...'
+  });
+
   // Check if it's a public route that doesn't need authentication
   const publicRoutes = ['/login', '/register', '/forgot-password', '/', '/health'];
   if (publicRoutes.includes(req.path)) {
@@ -560,26 +534,20 @@ export function isAuthenticated(req: Request, res: Response, next: NextFunction)
     return next();
   }
 
-  if (req.isAuthenticated()) {
+  if (req.isAuthenticated && req.isAuthenticated()) {
+    logger.info('User is authenticated, proceeding');
     return next();
   }
   
   // Return more specific error for API endpoints
   if (req.path.startsWith('/api/')) {
-    // Debug logging to aid diagnosing repeated 401s from clients
-    try {
-      logger.warn({
-        context: {
-          path: req.path,
-          method: req.method,
-          sessionID: req.sessionID,
-          cookies: req.headers.cookie,
-          isAuthenticated: req.isAuthenticated()
-        }
-      }, '[auth] Rejecting API request - unauthenticated');
-    } catch (e) {
-      logger.error({ error: e }, 'Failed to record auth rejection details:');
-    }
+    logger.warn('API request rejected - not authenticated:', {
+      path: req.path,
+      method: req.method,
+      sessionID: req.sessionID,
+      hasUser: !!req.user,
+      isAuthenticated: req.isAuthenticated?.()
+    });
 
     return res.status(401).json({ 
       message: "Authentication required",
@@ -588,7 +556,9 @@ export function isAuthenticated(req: Request, res: Response, next: NextFunction)
   }
 
   // Save the requested URL for redirect after login
-  req.session.returnTo = req.originalUrl;
+  if (req.session) {
+    req.session.returnTo = req.originalUrl;
+  }
   
   // Redirect to login for web pages
   res.redirect('/login');

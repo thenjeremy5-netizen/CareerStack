@@ -55,8 +55,10 @@ if ('BroadcastChannel' in window) {
     try {
       if (ev.data?.type === 'logout') {
         clearAllClientAuthData({ preservePreferences: true }).then(() => {
-          // ensure user sees logged-out UI
-          window.location.replace('/');
+          // Use safe navigation utility
+          import('./lib/navigation').then(({ safeRedirect }) => {
+            safeRedirect('/');
+          });
         });
       }
     } catch (e) {
@@ -69,7 +71,9 @@ if ('BroadcastChannel' in window) {
 window.addEventListener('storage', (ev) => {
   if (ev.key === 'rcp-logout') {
     clearAllClientAuthData({ preservePreferences: true }).then(() => {
-      window.location.replace('/');
+      import('./lib/navigation').then(({ safeRedirect }) => {
+        safeRedirect('/');
+      });
     });
   }
 });
@@ -77,19 +81,19 @@ window.addEventListener('storage', (ev) => {
 // Auto-logout after 24 hours from login (client-side enforcement)
 try {
   const LOGIN_TTL = 24 * 60 * 60 * 1000; // 24 hours
-  const loginAt =
-    parseInt(
-      localStorage.getItem('rcp_loginAt') || localStorage.getItem('lastActiveTime') || '0',
-      10
-    ) || 0;
+  const loginTimeStr = localStorage.getItem('rcp_loginAt') || localStorage.getItem('lastActiveTime') || '0';
+  const loginAt = parseInt(loginTimeStr, 10) || 0;
   const now = Date.now();
+  
   if (loginAt > 0) {
     const elapsed = now - loginAt;
     if (elapsed >= LOGIN_TTL) {
       // expired - perform cleanup immediately
-      clearAllClientAuthData({ preservePreferences: true }).then(() =>
-        window.location.replace('/')
-      );
+      clearAllClientAuthData({ preservePreferences: true }).then(() => {
+        import('./lib/navigation').then(({ safeRedirect }) => {
+          safeRedirect('/');
+        });
+      });
     } else {
       // schedule remaining time
       setTimeout(() => {

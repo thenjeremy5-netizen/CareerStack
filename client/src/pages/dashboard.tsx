@@ -221,9 +221,17 @@ export default function Dashboard() {
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       console.warn('[Dashboard] Accessed without authentication, redirecting...');
+      // Clear any stale auth data
+      localStorage.removeItem('authLoopDetected');
+      localStorage.removeItem('lastAuthLoopReset');
       navigate('/login');
     }
   }, [isLoading, isAuthenticated, navigate]);
+
+  // Debug authentication state
+  useEffect(() => {
+    console.log('Dashboard auth state:', { isLoading, isAuthenticated, user: user?.email });
+  }, [isLoading, isAuthenticated, user]);
 
   // Fetch resumes
   const {
@@ -642,7 +650,7 @@ export default function Dashboard() {
         {/* Welcome Section */}
         <section className="mb-10 animate-slide-in" aria-labelledby="welcome-heading">
           <h2 id="welcome-heading" className="text-3xl font-bold text-foreground mb-3 tracking-tight">
-            Welcome back, {(user as ClientUser)?.firstName || 'there'}!
+            Welcome back, {(user as ClientUser)?.pseudoName || (user as ClientUser)?.firstName || 'there'}!
           </h2>
           <p className="text-lg text-muted-foreground">
             Upload and customize your resumes with AI-powered precision.

@@ -14,7 +14,7 @@ interface RoleBasedRouteProps {
  */
 export function RoleBasedRoute({ children, allowedRoles }: RoleBasedRouteProps) {
   const { user, isLoading, isAuthenticated } = useAuth();
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
 
   // Show loading state while checking authentication
   if (isLoading) {
@@ -27,8 +27,11 @@ export function RoleBasedRoute({ children, allowedRoles }: RoleBasedRouteProps) 
 
   // Redirect to login if not authenticated
   if (!isAuthenticated || !user) {
-    const [, setLocation] = useLocation();
-    setLocation(`/login?redirect=${encodeURIComponent(location)}`);
+    // Navigate to login with redirect URL
+    const redirectUrl = `/login?redirect=${encodeURIComponent(location)}`;
+    if (location !== redirectUrl) {
+      setLocation(redirectUrl);
+    }
     return null;
   }
 

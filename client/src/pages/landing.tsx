@@ -37,9 +37,10 @@ export default function Landing() {
   // Redirect authenticated users to dashboard
   useEffect(() => {
     if (isAuthenticated && !isLoading) {
-      setLocation('/dashboard');
+      console.log('User is authenticated, redirecting to dashboard');
+      window.location.href = '/dashboard';
     }
-  }, [isAuthenticated, isLoading, setLocation]);
+  }, [isAuthenticated, isLoading]);
 
   // Show loading only while checking auth, not during redirect
   if (isLoading) {
@@ -57,7 +58,7 @@ export default function Landing() {
                 <FileText className="text-white" size={20} />
               </div>
               <h1 className="text-xl font-bold text-foreground tracking-tight">
-                ResumeCustomizer Pro
+                CareerStack
               </h1>
             </div>
 
@@ -313,9 +314,9 @@ export default function Landing() {
             <div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center">
               <FileText className="text-primary-foreground" size={16} />
             </div>
-            <span className="text-lg font-semibold text-foreground">ResumeCustomizer Pro</span>
+            <span className="text-lg font-semibold text-foreground">CareerStack</span>
           </div>
-          <p className="text-muted-foreground">© 2024 ResumeCustomizer Pro. All rights reserved.</p>
+          <p className="text-muted-foreground">© 2024 CareerStack. All rights reserved.</p>
         </div>
       </footer>
     </div>

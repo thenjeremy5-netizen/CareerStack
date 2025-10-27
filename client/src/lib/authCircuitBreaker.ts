@@ -3,8 +3,8 @@ class AuthCircuitBreaker {
   private failureCount = 0;
   private lastFailureTime = 0;
   private isOpen = false;
-  private readonly maxFailures = 3;
-  private readonly resetTimeout = 30000; // 30 seconds
+  private readonly maxFailures = 10; // Much higher threshold
+  private readonly resetTimeout = 2000; // Quick reset
 
   shouldAllowRequest(): boolean {
     const now = Date.now();
@@ -21,9 +21,14 @@ class AuthCircuitBreaker {
     this.failureCount++;
     this.lastFailureTime = Date.now();
     
+    // Only trigger for truly excessive failures
     if (this.failureCount >= this.maxFailures) {
       this.isOpen = true;
-      console.log('🚨 Auth circuit breaker opened - too many failures');
+      console.warn('Auth circuit breaker opened - excessive failures detected');
+      // Auto-reset quickly
+      setTimeout(() => {
+        this.reset();
+      }, this.resetTimeout);
     }
   }
 

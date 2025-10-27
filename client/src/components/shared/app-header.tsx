@@ -68,7 +68,7 @@ export function AppHeader({ currentPage = 'dashboard' }: AppHeaderProps) {
               <FileText className="text-white" size={20} />
             </div>
             <h1 className="text-xl font-bold text-foreground tracking-tight">
-              ResumeCustomizer Pro
+              CareerStack
             </h1>
           </button>
 
@@ -189,14 +189,14 @@ export function AppHeader({ currentPage = 'dashboard' }: AppHeaderProps) {
             <div className="flex items-center space-x-3">
               <div className="h-8 w-8 bg-primary rounded-full flex items-center justify-center">
                 <span className="text-sm font-medium text-primary-foreground">
-                  {(user as ClientUser)?.firstName?.[0] || (user as ClientUser)?.email?.[0] || 'U'}
+                  {(user as ClientUser)?.pseudoName?.[0] || (user as ClientUser)?.firstName?.[0] || (user as ClientUser)?.email?.[0] || 'U'}
                 </span>
               </div>
               <span
                 className="text-sm font-medium text-foreground hidden sm:inline-block"
                 data-testid="text-username"
               >
-                {(user as ClientUser)?.firstName || (user as ClientUser)?.email || 'User'}
+                {(user as ClientUser)?.pseudoName || (user as ClientUser)?.firstName || (user as ClientUser)?.email || 'User'}
               </span>
               <Button
                 variant="outline"

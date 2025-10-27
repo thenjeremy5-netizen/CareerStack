@@ -1,7 +1,7 @@
 module.exports = {
   apps: [
     {
-      name: 'resume-customizer-pro',
+      name: 'careerstack',
       script: 'dist/index.js',
       instances: process.env.MIN_INSTANCES || 2,
       exec_mode: 'cluster',
@@ -77,8 +77,8 @@ module.exports = {
       user: 'ubuntu',
       host: ['prod-1', 'prod-2'],
       ref: 'origin/main',
-      repo: 'git@github.com:username/resume-customizer-pro.git',
-      path: '/var/www/resume-customizer-pro',
+      repo: 'git@github.com:username/careerstack.git',
+      path: '/var/www/careerstack',
       'post-deploy':
         'npm install && npm run build && pm2 reload ecosystem.config.js --env production',
     },

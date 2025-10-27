@@ -56,7 +56,7 @@ function extractTracking(req: Request) {
 export class AuthController {
   // Register a new user
   static async register(req: Request, res: Response) {
-    const { email, password, firstName, lastName } = req.body;
+    const { email, password, pseudoName, firstName, lastName } = req.body;
 
     try {
       // Validate email format and check for common issues
@@ -87,6 +87,7 @@ export class AuthController {
       const result = await db.insert(users).values({
         email: normalizedEmail,
         password: hashedPassword,
+        pseudoName,
         firstName,
         lastName,
         emailVerificationToken: verification.tokenHash,
@@ -94,20 +95,21 @@ export class AuthController {
       }).returning({
         id: users.id,
         email: users.email,
+        pseudoName: users.pseudoName,
         firstName: users.firstName,
         lastName: users.lastName
       });
 
       const newUser = result[0];
 
-      if (!newUser || !newUser.id || !newUser.email || !newUser.firstName || !newUser.lastName) {
+      if (!newUser || !newUser.id || !newUser.email) {
         throw new Error('Failed to create user account');
       }
 
       // Send verification email (raw token)
       await AuthService.sendVerificationEmail(
         newUser.email,
-        `${newUser.firstName} ${newUser.lastName}`.trim() || 'User',
+        newUser.pseudoName || `${newUser.firstName} ${newUser.lastName}`.trim() || 'User',
         verification.token
       );
 
@@ -133,6 +135,8 @@ export class AuthController {
 
   // Login user
   static login(req: Request, res: Response, next: any) {
+    logger.info('Login attempt:', { email: req.body?.email, hasPassword: !!req.body?.password });
+    
     passport.authenticate('local', async (err: any, user: any, info: any) => {
       try {
         if (err) {
@@ -141,12 +145,14 @@ export class AuthController {
         }
 
         if (!user) {
-          logger.info('Login failed - no user:', info);
+          logger.error('Login failed - no user:', { info, email: req.body?.email });
           return res.status(401).json({ 
             success: false,
-            message: info.message || 'Invalid email or password' 
+            message: info?.message || 'Invalid email or password' 
           });
         }
+
+        logger.info('User authenticated successfully:', { userId: user.id, email: user.email });
 
         // Check if account is locked
         if (user.accountLockedUntil && user.accountLockedUntil > new Date()) {
@@ -540,7 +546,15 @@ export class AuthController {
 
   // Get current user
   static async getCurrentUser(req: Request, res: Response) {
+    logger.info('getCurrentUser called:', { 
+      hasUser: !!req.user, 
+      userId: req.user?.id,
+      isAuthenticated: req.isAuthenticated?.(),
+      sessionID: req.sessionID
+    });
+
     if (!req.user) {
+      logger.warn('No user in request object');
       return res.status(401).json({ message: 'Not authenticated' });
     }
 
@@ -550,8 +564,11 @@ export class AuthController {
       });
 
       if (!user) {
+        logger.error('User not found in database:', { userId: req.user.id });
         return res.status(404).json({ message: 'User not found' });
       }
+
+      logger.info('User found successfully:', { userId: user.id, email: user.email });
 
       // Remove sensitive data
       const { password, ...userWithoutPassword } = user;
@@ -613,8 +630,9 @@ export class AuthController {
               logger.warn({ context: logErr }, 'Failed to log device revocation during logout:');
             }
           } catch (dbErr) {
-            // Non-fatal: proceed with logout even if we couldn't revoke device record
-            logger.warn({ context: dbErr }, 'Failed to revoke device record during logout:');
+            // Log the error but don't fail the logout
+            logger.error({ context: dbErr }, 'Failed to revoke device record during logout - potential security issue:');
+            // Still proceed with logout for user experience
           }
         }
 
@@ -632,7 +650,10 @@ export class AuthController {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
                 sameSite: 'lax',
+                domain: process.env.COOKIE_DOMAIN || undefined,
               });
+              // Also clear CSRF token
+              res.clearCookie('csrf_token', { path: '/' });
               return res.json({ message: 'Logged out successfully' });
             });
           });
@@ -657,13 +678,15 @@ export class AuthController {
         })
         .where(eq(userDevices.refreshToken, tokenHash));
 
-      // Clear cookie for token-based logout as well (best-effort)
+      // Clear cookies for token-based logout as well (best-effort)
       res.clearCookie('sid', {
         path: '/',
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
+        domain: process.env.COOKIE_DOMAIN || undefined,
       });
+      res.clearCookie('csrf_token', { path: '/' });
 
       // Log the logout
       if (req.user) {

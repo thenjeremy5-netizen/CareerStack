@@ -1,4 +1,4 @@
-# 📄 Resume Customizer Pro
+# 📄 CareerStack
 
 <div align="center">
   <img src="https://img.shields.io/badge/React-18-blue?logo=react" alt="React" />
@@ -151,15 +151,15 @@ Follow these steps to get the app running locally.
 1. Clone and install dependencies
 
 ```powershell
-git clone https://github.com/12shivam219/Resume_Customizer_Pro.git
-cd Resume_Customizer_Pro
+git clone https://github.com/12shivam219/CareerStack.git
+cd CareerStack
 npm install
 ```
 
 2. Create a `.env` at the repository root. See the Environment variables section below for a full list. Minimal example:
 
 ```powershell
-Set-Content -Path .env -Value "DATABASE_URL=postgresql://username:password@localhost:5432/resume_customizer"
+Set-Content -Path .env -Value "DATABASE_URL=postgresql://username:password@localhost:5432/careerstack"
 Add-Content -Path .env -Value "NODE_ENV=development"
 Add-Content -Path .env -Value "PORT=5000"
 ```
@@ -204,7 +204,7 @@ Open http://localhost:5000 (or the `PORT` you configured).
 Create a `.env` file with the variables below. Required variables for local development are marked.
 
 - DATABASE_URL (required) — Postgres connection string used by Drizzle.
-  Example: `postgresql://user:password@localhost:5432/resume_customizer`
+  Example: `postgresql://user:password@localhost:5432/careerstack`
 - NODE_ENV — `development` | `production` (default: `development`).
 - PORT — Server port (default: `5000`).
 - SESSION_SECRET (required) — Secret used to sign session cookies.
@@ -218,7 +218,7 @@ Create a `.env` file with the variables below. Required variables for local deve
 Example `.env.example` (copy to `.env` and fill in values):
 
 ```env
-DATABASE_URL=postgresql://username:password@localhost:5432/resume_customizer
+DATABASE_URL=postgresql://username:password@localhost:5432/careerstack
 NODE_ENV=development
 PORT=5000
 SESSION_SECRET=your-session-secret

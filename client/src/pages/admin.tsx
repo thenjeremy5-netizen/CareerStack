@@ -4,13 +4,52 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Users, Shield, UserCheck, Loader2, RefreshCw, MoreVertical, History, Monitor, LogOut, AlertTriangle } from 'lucide-react';
+import {
+  Search,
+  Users,
+  Shield,
+  UserCheck,
+  Loader2,
+  RefreshCw,
+  MoreVertical,
+  History,
+  Monitor,
+  LogOut,
+  AlertTriangle,
+  AlertCircle,
+} from 'lucide-react';
 import { AppHeader } from '@/components/shared/app-header';
 import { LoginHistoryDialog } from '@/components/admin/login-history-dialog';
 import { ActiveSessionsDialog } from '@/components/admin/active-sessions-dialog';
@@ -46,7 +85,7 @@ interface Role {
 export default function AdminPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [page, setPage] = useState(1);
@@ -65,16 +104,20 @@ export default function AdminPage() {
       const res = await fetch('/api/admin/stats', { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to fetch stats');
       return res.json();
-    }
+    },
   });
 
   // Fetch users list
-  const { data: usersData, isLoading: usersLoading, refetch } = useQuery({
+  const {
+    data: usersData,
+    isLoading: usersLoading,
+    refetch,
+  } = useQuery({
     queryKey: ['/api/admin/users', { search, role: roleFilter, page }],
     queryFn: async () => {
       const params = new URLSearchParams({
         page: page.toString(),
-        limit: '10'
+        limit: '10',
       });
       if (search) params.append('search', search);
       if (roleFilter !== 'all') params.append('role', roleFilter);
@@ -82,7 +125,7 @@ export default function AdminPage() {
       const res = await fetch(`/api/admin/users?${params}`, { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to fetch users');
       return res.json();
-    }
+    },
   });
 
   // Fetch available roles
@@ -92,7 +135,7 @@ export default function AdminPage() {
       const res = await fetch('/api/admin/roles', { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to fetch roles');
       return res.json();
-    }
+    },
   });
 
   // Fetch suspicious logins count for security stats
@@ -100,15 +143,15 @@ export default function AdminPage() {
     queryKey: ['/api/admin/suspicious-logins', { page: 1, limit: 1 }],
     queryFn: async () => {
       try {
-        const res = await fetch('/api/admin/suspicious-logins?page=1&limit=1', { 
-          credentials: 'include' 
+        const res = await fetch('/api/admin/suspicious-logins?page=1&limit=1', {
+          credentials: 'include',
         });
         if (!res.ok) return { pagination: { total: 0 } };
         return res.json();
       } catch {
         return { pagination: { total: 0 } };
       }
-    }
+    },
   });
 
   // Update role mutation
@@ -116,17 +159,17 @@ export default function AdminPage() {
     mutationFn: async ({ userId, role }: { userId: string; role: string }) => {
       const csrfToken = document.cookie
         .split('; ')
-        .find(row => row.startsWith('csrf_token='))
+        .find((row) => row.startsWith('csrf_token='))
         ?.split('=')[1];
 
       const res = await fetch(`/api/admin/users/${userId}/role`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken || ''
+          'X-CSRF-Token': csrfToken || '',
         },
         credentials: 'include',
-        body: JSON.stringify({ role })
+        body: JSON.stringify({ role }),
       });
 
       if (!res.ok) {
@@ -142,16 +185,16 @@ export default function AdminPage() {
       setSelectedUser(null);
       toast({
         title: 'Role updated',
-        description: 'User role has been updated successfully'
+        description: 'User role has been updated successfully',
       });
     },
     onError: (error: Error) => {
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: error.message
+        description: error.message,
       });
-    }
+    },
   });
 
   const handleChangeRole = (user: User) => {
@@ -177,20 +220,24 @@ export default function AdminPage() {
   };
 
   const handleForceLogout = async (user: User) => {
-    if (confirm(`Force logout all sessions for ${user.email}? This will immediately disconnect the user from all devices.`)) {
+    if (
+      confirm(
+        `Force logout all sessions for ${user.email}? This will immediately disconnect the user from all devices.`
+      )
+    ) {
       try {
         const csrfToken = document.cookie
           .split('; ')
-          .find(row => row.startsWith('csrf_token='))
+          .find((row) => row.startsWith('csrf_token='))
           ?.split('=')[1];
 
         const res = await fetch(`/api/admin/users/${user.id}/force-logout`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-Token': csrfToken || ''
+            'X-CSRF-Token': csrfToken || '',
           },
-          credentials: 'include'
+          credentials: 'include',
         });
 
         if (!res.ok) {
@@ -200,18 +247,20 @@ export default function AdminPage() {
 
         toast({
           title: 'User logged out',
-          description: `All sessions for ${user.email} have been terminated`
+          description: `All sessions for ${user.email} have been terminated`,
         });
 
         // Refresh sessions if dialog is open
         if (activeSessionsUser?.id === user.id) {
-          queryClient.invalidateQueries({ queryKey: [`/api/admin/users/${user.id}/active-sessions`] });
+          queryClient.invalidateQueries({
+            queryKey: [`/api/admin/users/${user.id}/active-sessions`],
+          });
         }
       } catch (error) {
         toast({
           variant: 'destructive',
           title: 'Error',
-          description: error instanceof Error ? error.message : 'Failed to force logout'
+          description: error instanceof Error ? error.message : 'Failed to force logout',
         });
       }
     }
@@ -221,7 +270,7 @@ export default function AdminPage() {
     const variants: Record<string, 'default' | 'secondary' | 'destructive'> = {
       admin: 'destructive',
       marketing: 'default',
-      user: 'secondary'
+      user: 'secondary',
     };
     return <Badge variant={variants[role] || 'secondary'}>{role}</Badge>;
   };
@@ -229,21 +278,28 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-background">
       <AppHeader currentPage="admin" />
-      
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
           <p className="text-muted-foreground mt-2">Manage users and system settings</p>
           <div className="flex gap-2 mt-4">
-            <Button onClick={() => window.location.href = '/admin'} variant="default">
+            <Button onClick={() => (window.location.href = '/admin')} variant="default">
               User Management
             </Button>
-            <Button onClick={() => window.location.href = '/admin/approvals'} variant="outline">
+            <Button onClick={() => (window.location.href = '/admin/approvals')} variant="outline">
               Pending Approvals
             </Button>
-            <Button onClick={() => window.location.href = '/admin/security'} variant="outline">
+            <Button onClick={() => (window.location.href = '/admin/security')} variant="outline">
               <AlertTriangle className="h-4 w-4 mr-2" />
               Security
+            </Button>
+            <Button
+              onClick={() => (window.location.href = '/admin/error-reports')}
+              variant="outline"
+            >
+              <AlertCircle className="h-4 w-4 mr-2" />
+              Error Reports
             </Button>
           </div>
         </div>
@@ -277,9 +333,7 @@ export default function AdminPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{roleStats.count}</div>
-                <p className="text-xs text-muted-foreground">
-                  {roleStats.role} users
-                </p>
+                <p className="text-xs text-muted-foreground">{roleStats.role} users</p>
               </CardContent>
             </Card>
           ))}
@@ -294,14 +348,12 @@ export default function AdminPage() {
               <div className="text-2xl font-bold text-red-600">
                 {securityData?.pagination?.total || 0}
               </div>
-              <p className="text-xs text-muted-foreground">
-                Requires attention
-              </p>
-              <Button 
-                variant="outline" 
+              <p className="text-xs text-muted-foreground">Requires attention</p>
+              <Button
+                variant="outline"
                 size="sm"
                 className="mt-3 w-full text-xs"
-                onClick={() => window.location.href = '/admin/security'}
+                onClick={() => (window.location.href = '/admin/security')}
               >
                 View Security Dashboard
               </Button>
@@ -392,7 +444,11 @@ export default function AdminPage() {
                           <TableCell>
                             {user.lastLoginAt ? (
                               <div className="text-sm">
-                                <div>{formatDistanceToNow(new Date(user.lastLoginAt), { addSuffix: true })}</div>
+                                <div>
+                                  {formatDistanceToNow(new Date(user.lastLoginAt), {
+                                    addSuffix: true,
+                                  })}
+                                </div>
                                 <div className="text-xs text-muted-foreground">
                                   {new Date(user.lastLoginAt).toLocaleDateString()}
                                 </div>
@@ -410,7 +466,7 @@ export default function AdminPage() {
                               >
                                 Change Role
                               </Button>
-                              
+
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                   <Button size="sm" variant="ghost">
@@ -427,7 +483,7 @@ export default function AdminPage() {
                                     Active Sessions
                                   </DropdownMenuItem>
                                   <DropdownMenuSeparator />
-                                  <DropdownMenuItem 
+                                  <DropdownMenuItem
                                     onClick={() => handleForceLogout(user)}
                                     className="text-red-600"
                                   >
@@ -481,9 +537,7 @@ export default function AdminPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Change User Role</DialogTitle>
-            <DialogDescription>
-              Update the role for {selectedUser?.email}
-            </DialogDescription>
+            <DialogDescription>Update the role for {selectedUser?.email}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
@@ -521,9 +575,7 @@ export default function AdminPage() {
               onClick={handleSaveRole}
               disabled={updateRoleMutation.isPending || newRole === selectedUser?.role}
             >
-              {updateRoleMutation.isPending && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              )}
+              {updateRoleMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Save Changes
             </Button>
           </DialogFooter>

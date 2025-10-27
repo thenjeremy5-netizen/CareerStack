@@ -103,59 +103,41 @@ export function LoginForm({ onForgotPassword, onSuccess }: LoginFormProps = {}) 
         localStorage.setItem('rcp_loginAt', Date.now().toString());
         localStorage.removeItem('authErrorHandledAt');
         localStorage.removeItem('authLastRedirectAt');
+        
+        // Force refresh the auth query to pick up the new authentication state
+        queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       } catch (e) {}
 
       // Get any saved redirect URL
       const redirectUrl = localStorage.getItem('redirectAfterLogin');
       localStorage.removeItem('redirectAfterLogin'); // Clear it after reading
 
-      // Poll the user endpoint briefly to avoid race conditions where the session
-      // cookie isn't yet available to subsequent requests.
-      const waitForSession = async (timeoutMs = 3000, intervalMs = 200) => {
-        const start = Date.now();
-        // eslint-disable-next-line no-constant-condition
-        while (true) {
-          try {
-            const res = await fetch('/api/auth/user', {
-              credentials: 'include',
-              headers: { 'X-Requested-With': 'XMLHttpRequest' },
-            });
-            if (res.ok) {
-              const userData = await res.json();
-              // Immediately set the user data in the query cache to prevent race conditions
-              queryClient.setQueryData(['/api/auth/user'], userData);
-              // Also invalidate to trigger refetch in other components
-              await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
-              return userData;
-            }
-          } catch (_) {
-            // ignore and retry until timeout
-          }
-          if (Date.now() - start > timeoutMs) return null;
-          await new Promise((r) => setTimeout(r, intervalMs));
-        }
-      };
-
-      const userData = await waitForSession();
-
-      toast({
-        title: 'Welcome back!',
-        description: userData
-          ? "You've been successfully logged in."
-          : 'Logged in. Initializing your session...',
-      });
+      // Clear attempt count on successful login
+      setAttemptCount(0);
 
       // Close dialog if callback provided
       onSuccess?.();
 
-      // Wait longer to ensure auth state is fully propagated across all components
-      await new Promise(resolve => setTimeout(resolve, 500));
+      toast({
+        title: 'Welcome back!',
+        description: "You've been successfully logged in.",
+      });
 
-      // Redirect to the saved URL or default to dashboard
-      const targetUrl = redirectUrl || '/dashboard';
+      // Clear any auth error flags
+      localStorage.removeItem('authLoopDetected');
+      localStorage.removeItem('lastAuthLoopReset');
+      localStorage.removeItem('authErrorHandledAt');
+      localStorage.removeItem('lastAuthRedirect');
+
+      // Only redirect to saved URL if it's a public page, otherwise go to dashboard
+      const publicPages = ['/', '/privacy'];
+      const targetUrl = (redirectUrl && publicPages.includes(redirectUrl)) ? redirectUrl : '/dashboard';
       
-      // Use window.location.href for a clean redirect that resets all state
-      window.location.href = targetUrl;
+      // Use a small delay to ensure the auth state is updated before redirect
+      setTimeout(() => {
+        // Force a full page reload to ensure proper authentication state
+        window.location.href = targetUrl;
+      }, 100);
     } catch (error: any) {
       console.error('Login error caught:', error);
       setAttemptCount((prev) => prev + 1);

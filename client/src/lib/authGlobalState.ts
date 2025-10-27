@@ -22,15 +22,10 @@ const authGlobalState = {
     authRequestCount++;
     lastResetTime = now;
     
-    // If we've made too many requests, stop
+    // If we've made too many requests, stop (silently)
     if (authRequestCount > threshold) {
       authLoopDetected = true;
       localStorage.setItem('authLoopDetected', 'true');
-      console.warn('🚨 Auth loop detected - blocking further requests', {
-        count: authRequestCount,
-        threshold,
-        isStartup: isAppStartup
-      });
       return true;
     }
     

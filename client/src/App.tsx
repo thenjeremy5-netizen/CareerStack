@@ -10,12 +10,14 @@ import { PageLoader } from '@/components/ui/page-loader';
 import { PrivateRoute } from '@/components/auth/private-route';
 import { AdminRoute, MarketingRoute } from '@/components/auth/role-based-route';
 import { resetAllAuthState } from '@/lib/resetAuthState';
+import { useNavigationGuard } from '@/lib/navigation';
 
 // Lazy load all pages for optimal bundle splitting
 const NotFound = lazy(() => import('@/pages/not-found'));
 const Landing = lazy(() => import('@/pages/landing'));
 const Dashboard = lazy(() => import('@/pages/dashboard'));
 const MultiResumeEditorPage = lazy(() => import('@/pages/multi-resume-editor-page'));
+const ErrorReportsPage = lazy(() => import('@/pages/admin/error-reports'));
 const MarketingPage = lazy(() => import('@/pages/marketing'));
 const EmailPage = lazy(() => import('@/pages/email'));
 const AdminPage = lazy(() => import('@/pages/admin'));
@@ -35,10 +37,10 @@ const Router = memo(() => {
     const hasAuthLoop = localStorage.getItem('authLoopDetected');
     const lastLoopReset = localStorage.getItem('lastAuthLoopReset');
     const now = Date.now();
-    
+
     if (hasAuthLoop === 'true') {
       // Prevent rapid resets that cause reload loops - increased to 5 seconds
-      if (!lastLoopReset || (now - parseInt(lastLoopReset)) > 5000) {
+      if (!lastLoopReset || now - (parseInt(lastLoopReset) || 0) > 5000) {
         console.log('Resetting auth state due to detected loop');
         localStorage.setItem('lastAuthLoopReset', now.toString());
         localStorage.removeItem('authLoopDetected');
@@ -78,7 +80,7 @@ const Router = memo(() => {
       <Switch>
         {/* Root route - redirect based on auth status */}
         <Route path="/" component={Landing} />
-        
+
         {/* Public Routes */}
         <Route path="/login" component={Landing} />
         <Route path="/register" component={Landing} />
@@ -89,7 +91,7 @@ const Router = memo(() => {
         {/* Protected Routes */}
         <PrivateRoute path="/dashboard" component={Dashboard} />
         <PrivateRoute path="/editor" component={MultiResumeEditorPage} />
-        
+
         {/* Marketing Routes - Require marketing or admin role */}
         <Route path="/marketing">
           {() => (
@@ -98,7 +100,7 @@ const Router = memo(() => {
             </MarketingRoute>
           )}
         </Route>
-        
+
         <Route path="/email">
           {() => (
             <MarketingRoute>
@@ -132,6 +134,14 @@ const Router = memo(() => {
           )}
         </Route>
 
+        <Route path="/admin/error-reports">
+          {() => (
+            <AdminRoute>
+              <ErrorReportsPage />
+            </AdminRoute>
+          )}
+        </Route>
+
         {/* Unauthorized page */}
         <Route path="/unauthorized" component={UnauthorizedPage} />
 
@@ -144,11 +154,11 @@ const Router = memo(() => {
 Router.displayName = 'Router';
 
 import CookieConsent from '@/components/cookie-consent';
-import { ErrorBoundary } from '@/components/error-boundary';
+import { ErrorBoundaryWithReport } from '@/components/ui/error-boundary-with-report';
 
 const App = memo(() => {
   return (
-    <ErrorBoundary>
+    <ErrorBoundaryWithReport>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <Toaster />
@@ -170,7 +180,7 @@ const App = memo(() => {
           <CookieConsent />
         </TooltipProvider>
       </QueryClientProvider>
-    </ErrorBoundary>
+    </ErrorBoundaryWithReport>
   );
 });
 App.displayName = 'App';

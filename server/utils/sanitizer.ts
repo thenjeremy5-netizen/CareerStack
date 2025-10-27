@@ -221,75 +221,53 @@ function inferType(fieldName: string, value: any): string {
  * Validate and sanitize consultant data
  */
 export function sanitizeConsultantData(data: any): any {
-  return sanitizeObject(data, {
-    name: 'text',
-    email: 'email',
-    phone: 'phone',
-    visaStatus: 'text',
-    dateOfBirth: 'date',
-    address: 'text',
-    timezone: 'text',
-    degreeName: 'text',
-    university: 'text',
-    yearOfPassing: 'text',
-    ssn: 'ssn',
-    howDidYouGetVisa: 'text',
-    yearCameToUS: 'text',
-    countryOfOrigin: 'text',
-    whyLookingForNewJob: 'text',
-  });
+  // Pass the raw data through with minimal sanitization
+  const sanitized = { ...data };
+  
+  // Only sanitize mandatory fields
+  if (sanitized.name) sanitized.name = String(sanitized.name).trim();
+  if (sanitized.status) sanitized.status = String(sanitized.status).trim();
+  
+  return sanitized;
 }
 
 /**
  * Validate and sanitize requirement data
  */
 export function sanitizeRequirementData(data: any): any {
-  return sanitizeObject(data, {
-    jobTitle: 'text',
-    consultantId: 'text',
-    nextStep: 'text',
-    appliedFor: 'text',
-    rate: 'text',
-    remote: 'text',
-    duration: 'text',
-    clientCompany: 'text',
-    impName: 'text',
-    clientWebsite: 'url',
-    impWebsite: 'url',
-    vendorCompany: 'text',
-    vendorWebsite: 'url',
-    vendorPersonName: 'text',
-    vendorPhone: 'phone',
-    vendorEmail: 'email',
-    primaryTechStack: 'text',
-    completeJobDescription: 'html',
-  });
+  try {
+    if (!data || typeof data !== 'object') {
+      throw new Error('Invalid data object');
+    }
+    
+    const sanitized = { ...data };
+    
+    // Only sanitize mandatory fields to ensure they're not empty
+    if (sanitized.jobTitle) sanitized.jobTitle = String(sanitized.jobTitle).trim();
+    if (sanitized.consultantId) sanitized.consultantId = String(sanitized.consultantId).trim();
+    if (sanitized.appliedFor) sanitized.appliedFor = String(sanitized.appliedFor).trim();
+    if (sanitized.status) sanitized.status = String(sanitized.status).trim();
+    if (sanitized.completeJobDescription) sanitized.completeJobDescription = String(sanitized.completeJobDescription).trim();
+    
+    return sanitized;
+  } catch (error) {
+    console.error('Error sanitizing requirement data:', error);
+    return {};
+  }
 }
 
 /**
  * Validate and sanitize interview data
  */
 export function sanitizeInterviewData(data: any): any {
-  return sanitizeObject(data, {
-    requirementId: 'text',
-    interviewDate: 'date',
-    interviewTime: 'text',
-    timezone: 'text',
-    interviewType: 'text',
-    consultantId: 'text',
-    vendorCompany: 'text',
-    interviewWith: 'text',
-    result: 'text',
-    round: 'text',
-    mode: 'text',
-    meetingType: 'text',
-    duration: 'text',
-    subjectLine: 'text',
-    interviewer: 'text',
-    interviewLink: 'url',
-    interviewFocus: 'text',
-    specialNote: 'text',
-    jobDescription: 'html',
-    feedbackNotes: 'text',
-  });
+  // Pass the raw data through with minimal sanitization
+  const sanitized = { ...data };
+  
+  // Only sanitize mandatory fields
+  if (sanitized.requirementId) sanitized.requirementId = String(sanitized.requirementId).trim();
+  if (sanitized.consultantId) sanitized.consultantId = String(sanitized.consultantId).trim();
+  if (sanitized.interviewDate) sanitized.interviewDate = String(sanitized.interviewDate).trim();
+  if (sanitized.interviewTime) sanitized.interviewTime = String(sanitized.interviewTime).trim();
+  
+  return sanitized;
 }

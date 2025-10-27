@@ -31,6 +31,7 @@ export const users: any = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: varchar("email").notNull().unique(),
   password: varchar("password").notNull(),
+  pseudoName: varchar("pseudo_name"),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
@@ -302,11 +303,11 @@ export const consultants = pgTable("consultants", {
   
   // Consultant Info
   status: varchar("status").notNull().default("Active"), // Active, Not Active
-  name: text("name").notNull(),
+  name: text("name").notNull(), // Keep name mandatory
   visaStatus: text("visa_status"),
   dateOfBirth: timestamp("date_of_birth"),
   address: text("address"),
-  email: varchar("email").notNull().unique(),
+  email: varchar("email"), // Remove notNull and unique constraints
   phone: varchar("phone"),
   timezone: text("timezone"),
   degreeName: varchar("degree_name"),
@@ -355,9 +356,9 @@ export const requirements = pgTable("requirements", {
   displayId: varchar("display_id"), // REQ ID - 1, REQ ID - 2, etc.
   // Requirement & Communication
   status: varchar("status").notNull().default("New"), // New, Working, Applied, Submitted, Interviewed, Cancelled
-  consultantId: varchar("consultant_id").references(() => consultants.id, { onDelete: 'set null' }), // Reference to consultant
+  consultantId: varchar("consultant_id").notNull().references(() => consultants.id, { onDelete: 'set null' }), // Reference to consultant
   nextStep: text("next_step"),
-  appliedFor: varchar("applied_for").notNull().default("Rahul"),
+  appliedFor: varchar("applied_for").notNull(),
   rate: text("rate"),
   remote: text("remote"),
   duration: text("duration"),
@@ -379,9 +380,9 @@ export const requirements = pgTable("requirements", {
   // Job Requirement Info
   requirementEnteredDate: timestamp("requirement_entered_date").defaultNow(),
   gotRequirement: timestamp("got_requirement"),
-  jobTitle: varchar("job_title"),
+  jobTitle: varchar("job_title").notNull(),
   primaryTechStack: varchar("primary_tech_stack"),
-  completeJobDescription: text("complete_job_description"),
+  completeJobDescription: text("complete_job_description").notNull(),
   
   createdBy: varchar("created_by").notNull().references(() => users.id, { onDelete: 'cascade' }),
   createdAt: timestamp("created_at").defaultNow(),
@@ -400,12 +401,12 @@ export const interviews = pgTable("interviews", {
   requirementId: varchar("requirement_id").notNull().references(() => requirements.id, { onDelete: 'cascade' }),
   
   // Interview Details
-  interviewDate: timestamp("interview_date"),
-  interviewTime: varchar("interview_time"), // e.g., "10:30 AM"
-  timezone: varchar("timezone").notNull().default("EST"), // EST, CST, MST, PST
+  interviewDate: timestamp("interview_date").notNull(), // Keep mandatory
+  interviewTime: varchar("interview_time").notNull(), // Keep mandatory
+  timezone: varchar("timezone"), // Remove default and make optional
   interviewType: varchar("interview_type"),
-  status: varchar("status").notNull().default("Confirmed"), // All, Cancelled, Re-Scheduled, Confirmed, Completed
-  consultantId: varchar("consultant_id").references(() => consultants.id, { onDelete: 'set null' }), // Reference to consultant
+  status: varchar("status"), // Make optional
+  consultantId: varchar("consultant_id").notNull().references(() => consultants.id, { onDelete: 'set null' }), // Keep mandatory
   marketingPersonId: varchar("marketing_person_id").references(() => users.id, { onDelete: 'set null' }),
   vendorCompany: varchar("vendor_company"),
   interviewWith: varchar("interview_with"), // Client/IMP/Vendor

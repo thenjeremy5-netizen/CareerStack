@@ -34,6 +34,11 @@ const formSchema = z
       .email('Invalid email address')
       .trim()
       .toLowerCase(),
+    pseudoName: z
+      .string()
+      .min(1, 'Pseudo name is required')
+      .max(50, 'Pseudo name must be less than 50 characters')
+      .trim(),
     password: z
       .string()
       .min(MIN_PASSWORD_LENGTH, `Password must be at least ${MIN_PASSWORD_LENGTH} characters`)
@@ -70,6 +75,7 @@ export function RegisterForm() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       email: '',
+      pseudoName: '',
       password: '',
       confirmPassword: '',
       acceptTerms: false,
@@ -79,9 +85,10 @@ export function RegisterForm() {
   async function onSubmit(data: FormData) {
     setIsLoading(true);
     try {
-      // Sanitize the email
+      // Sanitize the data
       const sanitizedData = {
         email: data.email.toLowerCase().trim(),
+        pseudoName: data.pseudoName.trim(),
         password: data.password,
       };
 
@@ -159,6 +166,23 @@ export function RegisterForm() {
                   placeholder="Enter your email" 
                   autoComplete="email"
                   type="email"
+                  {...field} 
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="pseudoName"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Pseudo Name</FormLabel>
+              <FormControl>
+                <Input 
+                  placeholder="Enter your display name" 
+                  autoComplete="username"
                   {...field} 
                 />
               </FormControl>

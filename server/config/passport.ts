@@ -19,13 +19,18 @@ export function configurePassport(passport: any) {
       },
       async (req, email, password, done) => {
         try {
+          logger.info('Passport strategy executing:', { email, hasPassword: !!password });
+          
           // Find user by email
           const user = await db.query.users.findFirst({
-            where: eq(users.email, email),
+            where: eq(users.email, email.toLowerCase()),
           });
+
+          logger.info('User lookup result:', { found: !!user, email });
 
           // If user not found
           if (!user) {
+            logger.warn('User not found:', { email });
             return done(null, false, { message: 'Invalid email or password' });
           }
 
@@ -55,11 +60,22 @@ export function configurePassport(passport: any) {
 
           // If email is not verified
           if (!user.emailVerified) {
+            logger.warn('Email not verified:', { email, userId: user.id });
             return done(null, false, {
               message: 'Please verify your email before logging in.',
               requiresVerification: true,
             } as any);
           }
+
+          // Check approval status
+          if (user.approvalStatus !== 'approved') {
+            logger.warn('User not approved:', { email, userId: user.id, approvalStatus: user.approvalStatus });
+            return done(null, false, {
+              message: 'Account pending approval.',
+            });
+          }
+
+          logger.info('User passed all checks:', { email, userId: user.id });
 
           // Reset failed login attempts on successful login
           if ((user.failedLoginAttempts || 0) > 0) {
@@ -98,14 +114,26 @@ export function configurePassport(passport: any) {
           email: true,
           firstName: true,
           lastName: true,
+          pseudoName: true,
           emailVerified: true,
           twoFactorEnabled: true,
+          role: true,
+          approvalStatus: true,
           createdAt: true,
           updatedAt: true,
         },
       });
 
-      done(null, user || false);
+      if (!user) {
+        return done(null, false);
+      }
+
+      // Check if user is approved
+      if (user.approvalStatus !== 'approved') {
+        return done(null, false);
+      }
+
+      done(null, user);
     } catch (error) {
       logger.error({ error: error }, 'Deserialize user error:');
       done(error);

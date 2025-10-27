@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import passport from "passport";
 import { storage } from "./storage";
@@ -573,6 +573,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Admin login history and force logout routes
   app.use('/api/admin', (await import('./routes/adminLoginHistoryRoutes')).default);
+  
+  // Error reports routes
+  app.use('/api/error-reports', (await import('./routes/errorReports')).default);
+  
+  // Upload routes (for error screenshots)
+  app.use('/api/uploads', (await import('./routes/uploads')).default);
+  
+  // Serve uploaded files statically
+  app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
   // Email enhancements routes
   app.use('/api/email-enhancements', emailEnhancementsRoutes);
@@ -887,16 +896,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Logout is handled by AuthController (supports both session and token logout)
-
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
-    try {
-      const user = await storage.getUser(req.user.id);
-      res.json(user);
-    } catch (error) {
-      logger.error({ error: error }, 'Error fetching user:');
-      res.status(500).json({ message: "Failed to fetch user" });
-    }
-  });
 
   // Resend email verification
   // Use distributed Redis-backed rate limiting for verification resend

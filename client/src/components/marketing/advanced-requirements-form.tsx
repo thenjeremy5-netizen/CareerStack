@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useForm, Controller } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -48,23 +50,23 @@ import { RequirementStatus } from '@shared/schema';
 interface RequirementFormData {
   jobTitle: string;
   status: string;
-  consultantId: string | null;  // Remove optional to match expected type
+  consultantId: string | null;
   appliedFor: string;
   rate: string;
   primaryTechStack: string;
   clientCompany: string;
-  impName: string;        // Remove optional to match expected type
-  clientWebsite: string;  // Remove optional to match expected type
-  impWebsite: string;     // Remove optional to match expected type
-  vendorCompany: string;  // Remove optional to match expected type
-  vendorWebsite: string;  // Remove optional to match expected type
-  vendorPersonName: string; // Remove optional to match expected type
-  vendorPhone: string;    // Remove optional to match expected type
-  vendorEmail: string;    // Remove optional to match expected type
+  impName: string;
+  clientWebsite: string;
+  impWebsite: string;
+  vendorCompany: string;
+  vendorWebsite: string;
+  vendorPersonName: string;
+  vendorPhone: string;
+  vendorEmail: string;
   completeJobDescription: string;
-  nextStep: string;      // Remove optional to match expected type
-  remote: string;        // Remove optional to match expected type
-  duration: string;      // Remove optional to match expected type
+  nextStep: string;
+  remote: string;
+  duration: string;
 }
 
 // Default form values
@@ -87,7 +89,7 @@ const defaultValues: RequirementFormData = {
   completeJobDescription: '',
   nextStep: '',
   remote: '',
-  duration: ''
+  duration: '',
 };
 
 export interface Consultant {
@@ -161,9 +163,33 @@ export default function AdvancedRequirementsForm({
   } = useForm({
     shouldUnregister: false, // Preserve field values when unmounting
     mode: 'onChange',
+    resolver: zodResolver(
+      z.object({
+        jobTitle: z.string().min(1, 'Job Title is required'),
+        status: z.string().min(1, 'Status is required'),
+        consultantId: z.string().min(1, 'Assigned Consultant is required'),
+        appliedFor: z.string().min(1, 'Applied For is required'),
+        completeJobDescription: z.string().min(1, 'Complete Job Description is required'),
+        // All other fields are optional
+        rate: z.string().optional(),
+        primaryTechStack: z.string().optional(),
+        clientCompany: z.string().optional(),
+        impName: z.string().optional(),
+        clientWebsite: z.string().optional(),
+        impWebsite: z.string().optional(),
+        vendorCompany: z.string().optional(),
+        vendorWebsite: z.string().optional(),
+        vendorPersonName: z.string().optional(),
+        vendorPhone: z.string().optional(),
+        vendorEmail: z.string().optional(),
+        nextStep: z.string().optional(),
+        remote: z.string().optional(),
+        duration: z.string().optional(),
+      })
+    ),
     defaultValues: {
       status: RequirementStatus.NEW,
-      appliedFor: 'Rahul',
+      appliedFor: '',
       jobTitle: '',
       consultantId: null,
       rate: '',
@@ -217,7 +243,11 @@ export default function AdvancedRequirementsForm({
 
     // Create backup on significant changes
     if (isDirty) {
-      createBackup(watch());
+      try {
+        createBackup(watch());
+      } catch (error) {
+        console.warn('Failed to create form backup:', error);
+      }
     }
   }, [isValid, errors, isDirty, watch, createBackup]);
 
@@ -326,10 +356,10 @@ export default function AdvancedRequirementsForm({
 
   const handleValidateSection = async (section: string) => {
     const fieldsMap = {
-      requirement: ['jobTitle', 'status', 'consultantId', 'appliedFor', 'primaryTechStack'],
-      client: ['clientCompany', 'impName', 'clientWebsite', 'impWebsite'],
-      vendor: ['vendorCompany', 'vendorWebsite', 'vendorPersonName', 'vendorPhone', 'vendorEmail'],
-      job: ['completeJobDescription', 'nextStep', 'remote', 'duration'],
+      requirement: ['jobTitle', 'status', 'consultantId', 'appliedFor'], // Only mandatory fields
+      client: [], // All optional
+      vendor: [], // All optional
+      job: ['completeJobDescription'], // Only mandatory field
     };
 
     const fields = fieldsMap[section as keyof typeof fieldsMap] || [];
