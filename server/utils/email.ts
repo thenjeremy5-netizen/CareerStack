@@ -62,8 +62,11 @@ const createTransporter = async () => {
         secure: process.env.EMAIL_SECURE === 'true',
         auth: {
           user: process.env.EMAIL_USER || '',
-          // Common pitfall: some providers (e.g., Gmail app passwords) are copied with spaces
-          pass: (process.env.EMAIL_PASSWORD || '').replace(/\s+/g, '')
+          pass: process.env.EMAIL_PASSWORD || ''
+        },
+        tls: {
+          rejectUnauthorized: true,
+          minVersion: 'TLSv1.2'
         }
       } as TransportOptions;
       return nodemailer.createTransport(smtpConfig);
@@ -99,7 +102,7 @@ const createTransporter = async () => {
   
     return nodemailer.createTransport(transportConfig);
   } catch (error) {
-    logger.error({ error: error }, 'Error creating transporter:');
+    logger.error({ error: String(error) }, 'Error creating transporter');
     throw error;
   }
 };
@@ -207,7 +210,11 @@ export async function sendEmail(
           secure: process.env.EMAIL_SECURE === 'true',
           auth: {
             user: process.env.EMAIL_USER || '',
-            pass: (process.env.EMAIL_PASSWORD || '').replace(/\s+/g, '')
+            pass: process.env.EMAIL_PASSWORD || ''
+          },
+          tls: {
+            rejectUnauthorized: true,
+            minVersion: 'TLSv1.2'
           }
         } as TransportOptions;
         logger.info('🔁 Attempting fallback send via generic SMTP settings...');
@@ -218,19 +225,18 @@ export async function sendEmail(
         logger.info(`📧 Accepted: ${info2.accepted?.length || 0}, Rejected: ${info2.rejected?.length || 0}`);
         return true;
       } catch (fallbackError) {
-        logger.error({ err: fallbackError }, '❌ Fallback SMTP send failed');
+        logger.error({ error: String(fallbackError) }, 'Fallback SMTP send failed');
         throw primaryError;
       }
     }
     
   } catch (error) {
-    logger.error({ err: error }, `❌ Failed to send email to ${to}`);
+    logger.error({ error: String(error), recipient: to.replace(/[^@\w.-]/g, '') }, 'Failed to send email');
     logger.error(`📧 Email subject: ${subject}`);
     
     // Log specific error details
     if (error instanceof Error) {
-      logger.error(`📧 Error message: ${error.message}`);
-      logger.error(`📧 Error stack: ${error.stack}`);
+      logger.error({ message: error.message.replace(/[\r\n]/g, ' ') }, 'Email error details');
     }
     return false;
   }

@@ -36,6 +36,7 @@
     "generate:test-requirements": "npx tsx scripts/generate-test-requirements.ts",
     "generate:quick-requirements": "npx tsx scripts/quick-requirements-generator.ts",
     "generate:quick-consultants": "npx tsx scripts/quick-consultants-generator.ts",
+    "security:validate": "npx tsx scripts/validate-security.ts",
     "docker:logs": "docker-compose logs -f",
     "docker:down": "docker-compose down",
     "docker:clean": "docker-compose down -v --remove-orphans"

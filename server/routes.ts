@@ -160,17 +160,15 @@ function logRequest(method: string, path: string, userId?: string, extra?: any) 
   const timestamp = new Date().toISOString();
   const userInfo = userId ? ` - User: ${userId}` : '';
   const extraInfo = extra ? ` - ${JSON.stringify(extra)}` : '';
-  logger.info(`🔍 [${timestamp}] ${method} ${path}${userInfo}${extraInfo}`);
+  logger.info({ method, path, userId, extra }, 'Request logged');
 }
 
 function logSuccess(operation: string, details?: any) {
-  const detailsInfo = details ? ` - ${JSON.stringify(details)}` : '';
-  logger.info(`✅ ${operation}${detailsInfo}`);
+  logger.info({ operation, details }, 'Operation successful');
 }
 
 function logError(operation: string, error: any, context?: any) {
-  const contextInfo = context ? ` - Context: ${JSON.stringify(context)}` : '';
-  logger.error(`💥 ${operation} failed:`, error, contextInfo);
+  logger.error({ operation, error: String(error), context }, 'Operation failed');
 }
 
 // Helper function to verify resume ownership
@@ -195,14 +193,14 @@ async function verifyBulkResumeOwnership(resumeIds: string[], userId: string) {
       logRequest('VERIFY', `/resumes/${id}`, userId, { index: index + 1, total: resumeIds.length });
       const resume = await storage.getResumeById(id);
       if (!resume) {
-        logError('Resume verification', `Resume not found: ${id}`);
+        logError('Resume verification', 'Resume not found', { resumeId: id });
         return null;
       }
       if (resume.userId !== userId) {
-        logError('Resume verification', `Access denied to resume ${id}`, { owner: resume.userId, requestor: userId });
+        logError('Resume verification', 'Access denied to resume', { resumeId: id, owner: resume.userId, requestor: userId });
         return null;
       }
-      logSuccess(`Resume ${id} verified`);
+      logSuccess('Resume verified', { resumeId: id });
       return resume;
     })
   );
@@ -289,53 +287,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const MAX_ATTEMPTS = 10; // per window per email+IP
 
   const loginRateLimiter = async (req: any, res: any, next: any) => {
-    const email = (req.body?.email || '').toLowerCase();
-    const ip = String(req.ip || 'unknown');
+    const email = (req.body?.email || '').toLowerCase().replace(/[\r\n\t]/g, '');
+    const ip = String(req.ip || 'unknown').replace(/[\r\n\t]/g, '');
     const now = new Date();
 
     if (!email) return next();
 
-    // Fetch current record
-    const rec = await db.query.authRateLimits.findFirst({
-      where: (t, { and, eq }) => and(eq(t.email, email), eq(t.ip, ip)),
-    });
-
-    // If currently blocked, enforce it
-    if (rec?.blockedUntil && rec.blockedUntil > now) {
-      const retryAfter = Math.ceil((rec.blockedUntil.getTime() - now.getTime()) / 1000);
-      res.set('Retry-After', String(retryAfter));
-      return res.status(429).json({ message: 'Too many login attempts. Please try again later.' });
-    }
-
-    let count = rec?.count ?? 0;
-    let windowStart = rec?.windowStart ?? now;
-
-    if (now.getTime() - windowStart.getTime() > WINDOW_MS) {
-      count = 0;
-      windowStart = now;
-    }
-    count += 1;
-
-    // Determine block
-    const shouldBlock = count > MAX_ATTEMPTS;
-    const blockedUntil = shouldBlock ? new Date(windowStart.getTime() + WINDOW_MS) : null;
-
-    // Upsert record
-    await db
-      .insert(authRateLimits)
-      .values({ email, ip, count, windowStart, blockedUntil: blockedUntil ?? undefined, updatedAt: now })
-      .onConflictDoUpdate({
-        target: [authRateLimits.email, authRateLimits.ip],
-        set: { count, windowStart, blockedUntil: blockedUntil ?? null, updatedAt: now },
+    try {
+      // Fetch current record
+      const rec = await db.query.authRateLimits.findFirst({
+        where: (t, { and, eq }) => and(eq(t.email, email), eq(t.ip, ip)),
       });
 
-    if (shouldBlock) {
-      const retryAfter = Math.ceil((blockedUntil!.getTime() - now.getTime()) / 1000);
-      res.set('Retry-After', String(retryAfter));
-      return res.status(429).json({ message: 'Too many login attempts. Please try again later.' });
-    }
+      // If currently blocked, enforce it
+      if (rec?.blockedUntil && rec.blockedUntil > now) {
+        const retryAfter = Math.ceil((rec.blockedUntil.getTime() - now.getTime()) / 1000);
+        res.set('Retry-After', String(retryAfter));
+        return res.status(429).json({ message: 'Too many login attempts. Please try again later.' });
+      }
 
-    next();
+      let count = rec?.count ?? 0;
+      let windowStart = rec?.windowStart ?? now;
+
+      if (now.getTime() - windowStart.getTime() > WINDOW_MS) {
+        count = 0;
+        windowStart = now;
+      }
+      count += 1;
+
+      // Determine block
+      const shouldBlock = count > MAX_ATTEMPTS;
+      const blockedUntil = shouldBlock ? new Date(windowStart.getTime() + WINDOW_MS) : null;
+
+      // Upsert record
+      await db
+        .insert(authRateLimits)
+        .values({ email, ip, count, windowStart, blockedUntil: blockedUntil ?? undefined, updatedAt: now })
+        .onConflictDoUpdate({
+          target: [authRateLimits.email, authRateLimits.ip],
+          set: { count, windowStart, blockedUntil: blockedUntil ?? null, updatedAt: now },
+        });
+
+      if (shouldBlock) {
+        const retryAfter = Math.ceil((blockedUntil!.getTime() - now.getTime()) / 1000);
+        res.set('Retry-After', String(retryAfter));
+        return res.status(429).json({ message: 'Too many login attempts. Please try again later.' });
+      }
+
+      next();
+    } catch (error) {
+      logger.error('Rate limiter error');
+      // Fail open - allow request to proceed if rate limiter fails
+      next();
+    }
   };
 
   // Per-user job submission quotas and coarse in-flight limits (Redis-backed)
@@ -818,7 +822,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
           processed++;
         } catch (error) {
-          logger.error({ error, resumeId: resume.id }, 'Failed to queue job for resume');
+          logger.error({ error: String(error), resumeId: resume.id }, 'Failed to queue job for resume');
         }
       }
       
@@ -841,7 +845,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { email, password } = authSchema.parse(req.body);
       const existingUser = await storage.getUserByEmail(email);
       if (existingUser) {
-        logError('Registration', 'Email already registered', { email });
+        logError('Registration', 'Email already registered', { email: email.replace(/[^@\w.-]/g, '') });
         return res.status(400).json({ message: 'Email already registered' });
       }
       
@@ -883,7 +887,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
       } catch {}
 
-      logSuccess('User registered (verification required)', { userId: insertedUser.id, email: insertedUser.email });
+      logSuccess('User registered (verification required)', { userId: insertedUser.id, email: insertedUser.email.replace(/[^@\w.-]/g, '') });
       return res.status(201).json({
         message: 'Registration successful. Please check your email to verify your account.',
       });
@@ -1218,7 +1222,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               logger.info(`🗑️  Deleted old backup: ${oldBackupPath}`);
             }
           } catch (err) {
-            logger.warn({ context: err }, 'Failed to create backup:');
+            logger.warn({ error: String(err) }, 'Failed to create backup');
             // Continue anyway - backup failure shouldn't block save
           }
         }
@@ -1410,7 +1414,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Queue for background processing
           queueBackground = true;
         } catch (error) {
-          logger.error({ err: error }, `File validation failed ${file.originalname}`);
+          logger.error({ error: String(error), fileName: file.originalname.replace(/[^\w.-]/g, '') }, 'File validation failed');
           throw error;
         }
         
@@ -1446,7 +1450,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
           logger.info(`📨 Queued background DOCX processing for: ${file.originalname}`);
         } catch (e) {
-          logger.warn({ context: e }, 'Failed to queue background DOCX processing job');
+          logger.warn({ error: String(e) }, 'Failed to queue background DOCX processing job');
         }
 
         // Cache small thumbnails placeholder entry (server-side pre-gen hook)

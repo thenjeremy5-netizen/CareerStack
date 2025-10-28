@@ -9,6 +9,7 @@ import { ActivityTracker } from '../utils/activityTracker';
 import { EmailValidator } from '../utils/emailValidator';
 import { createHash } from 'crypto';
 import { logger } from '../utils/logger';
+import { sanitizeInput, validatePasswordStrength, getSecureCookieOptions, sendGenericError } from '../config/security';
 
 function parseCookies(header?: string) {
   const result: Record<string, string> = {};
@@ -57,10 +58,30 @@ export class AuthController {
   // Register a new user
   static async register(req: Request, res: Response) {
     const { email, password, pseudoName, firstName, lastName } = req.body;
+    
+    // Input validation and sanitization
+    if (!email || !password || !pseudoName) {
+      return res.status(400).json({ message: 'Required fields are missing' });
+    }
+    
+    // Sanitize inputs to prevent injection attacks
+    const sanitizedEmail = sanitizeInput(email).toLowerCase();
+    const sanitizedPseudoName = sanitizeInput(pseudoName);
+    const sanitizedFirstName = firstName ? sanitizeInput(firstName) : '';
+    const sanitizedLastName = lastName ? sanitizeInput(lastName) : '';
+    
+    // Validate password strength
+    const passwordValidation = validatePasswordStrength(password);
+    if (!passwordValidation.isValid) {
+      return res.status(400).json({ 
+        message: 'Password does not meet security requirements',
+        errors: passwordValidation.errors
+      });
+    }
 
     try {
       // Validate email format and check for common issues
-      const emailValidation = await EmailValidator.validateEmail(email);
+      const emailValidation = await EmailValidator.validateEmail(sanitizedEmail);
       if (!emailValidation.isValid) {
         return res.status(400).json({ 
           message: emailValidation.reason,
@@ -69,7 +90,7 @@ export class AuthController {
       }
 
       // Normalize email
-      const normalizedEmail = EmailValidator.normalizeEmail(email);
+      const normalizedEmail = EmailValidator.normalizeEmail(sanitizedEmail);
 
       // Check if user already exists
       const existingUser = await db.query.users.findFirst({
@@ -77,7 +98,7 @@ export class AuthController {
       });
 
       if (existingUser) {
-        return res.status(409).json({ message: 'Email already in use' });
+        return res.status(409).json({ message: 'Registration failed. Please try again with different details.' });
       }
 
       // Hash password and create user
@@ -87,9 +108,9 @@ export class AuthController {
       const result = await db.insert(users).values({
         email: normalizedEmail,
         password: hashedPassword,
-        pseudoName,
-        firstName,
-        lastName,
+        pseudoName: sanitizedPseudoName,
+        firstName: sanitizedFirstName,
+        lastName: sanitizedLastName,
         emailVerificationToken: verification.tokenHash,
         emailVerificationExpires: verification.expiresAt,
       }).returning({
@@ -135,7 +156,8 @@ export class AuthController {
 
   // Login user
   static login(req: Request, res: Response, next: any) {
-    logger.info('Login attempt:', { email: req.body?.email, hasPassword: !!req.body?.password });
+    const sanitizedEmail = req.body?.email ? req.body.email.replace(/[\r\n\t]/g, '') : 'undefined';
+    logger.info({ hasEmail: !!req.body?.email, hasPassword: !!req.body?.password }, 'Login attempt initiated');
     
     passport.authenticate('local', async (err: any, user: any, info: any) => {
       try {
@@ -145,14 +167,13 @@ export class AuthController {
         }
 
         if (!user) {
-          logger.error('Login failed - no user:', { info, email: req.body?.email });
           return res.status(401).json({ 
             success: false,
-            message: info?.message || 'Invalid email or password' 
+            message: 'Invalid credentials' 
           });
         }
 
-        logger.info('User authenticated successfully:', { userId: user.id, email: user.email });
+        logger.info({ userId: user.id }, 'User authenticated successfully');
 
         // Check if account is locked
         if (user.accountLockedUntil && user.accountLockedUntil > new Date()) {
@@ -219,9 +240,16 @@ export class AuthController {
         // If no 2FA required, proceed with login
         req.login(user, async (err) => {
           if (err) {
-            logger.error({ error: err }, 'Login error:');
+            logger.error('Login session error');
             return next(err);
           }
+          
+          // Regenerate session ID to prevent session fixation
+          req.session.regenerate(async (regenerateErr) => {
+            if (regenerateErr) {
+              logger.error('Session regeneration failed');
+              return next(regenerateErr);
+            }
           
           // Get geolocation and device info
           const ipAddress = (req.ip || 'unknown').replace('::ffff:', '');
@@ -339,24 +367,25 @@ export class AuthController {
           // Return tokens and user info (without sensitive data)
           const { password: _, ...userWithoutPassword } = user;
           
-          // Ensure session state is persisted before responding to avoid race conditions
-          if (req.session) {
-            req.session.save(() => {
+            // Ensure session state is persisted before responding to avoid race conditions
+            if (req.session) {
+              req.session.save(() => {
+                res.json({
+                  success: true,
+                  user: userWithoutPassword,
+                  accessToken,
+                  refreshToken,
+                });
+              });
+            } else {
               res.json({
                 success: true,
                 user: userWithoutPassword,
                 accessToken,
                 refreshToken,
               });
-            });
-          } else {
-            res.json({
-              success: true,
-              user: userWithoutPassword,
-              accessToken,
-              refreshToken,
-            });
-          }
+            }
+          }); // Close regenerate callback
         });
       } catch (error) {
         logger.error({ error: error }, 'Login error:');
@@ -368,6 +397,17 @@ export class AuthController {
   // Verify 2FA code
   static async verify2FACode(req: Request, res: Response) {
     const { code, tempToken } = req.body;
+    
+    // Input validation
+    if (!code || !tempToken) {
+      return res.status(400).json({ message: 'Code and token are required' });
+    }
+    
+    // Sanitize code input (should be 6 digits)
+    const sanitizedCode = code.toString().replace(/[^0-9]/g, '').slice(0, 6);
+    if (sanitizedCode.length !== 6) {
+      return res.status(400).json({ message: 'Invalid verification code format' });
+    }
 
     try {
       // Verify the temp token and get user ID
@@ -376,9 +416,8 @@ export class AuthController {
         return res.status(400).json({ message: 'Invalid or expired verification request' });
       }
 
-      // In a real app, you would verify the code against the stored value
-      // For this example, we'll just check if it matches the one we sent
-      if (code !== decoded.code) {
+      // Verify the code against the stored value
+      if (sanitizedCode !== decoded.code) {
         // Log failed attempt
         {
           const { referrer, utm } = extractTracking(req);
@@ -452,10 +491,18 @@ export class AuthController {
   // Request password reset
   static async requestPasswordReset(req: Request, res: Response) {
     const { email } = req.body;
+    
+    // Input validation
+    if (!email) {
+      return res.status(400).json({ message: 'Email is required' });
+    }
+    
+    // Sanitize email input
+    const sanitizedEmail = sanitizeInput(email).toLowerCase();
 
     try {
       // Quick email validation (without DNS check for performance)
-      const emailValidation = EmailValidator.validateEmailQuick(email);
+      const emailValidation = EmailValidator.validateEmailQuick(sanitizedEmail);
       if (!emailValidation.isValid) {
         // Still return success to prevent email enumeration
         return res.json({ 
@@ -464,7 +511,7 @@ export class AuthController {
       }
 
       // Normalize email
-      const normalizedEmail = EmailValidator.normalizeEmail(email);
+      const normalizedEmail = EmailValidator.normalizeEmail(sanitizedEmail);
 
       const user = await db.query.users.findFirst({
         where: eq(users.email, normalizedEmail),
@@ -505,6 +552,20 @@ export class AuthController {
   // Reset password
   static async resetPassword(req: Request, res: Response) {
     const { token, newPassword } = req.body;
+    
+    // Input validation
+    if (!token || !newPassword) {
+      return res.status(400).json({ message: 'Token and new password are required' });
+    }
+    
+    // Validate password strength
+    const passwordValidation = validatePasswordStrength(newPassword);
+    if (!passwordValidation.isValid) {
+      return res.status(400).json({ 
+        message: 'Password does not meet security requirements',
+        errors: passwordValidation.errors
+      });
+    }
 
     try {
       // Verify token and get user
@@ -546,12 +607,12 @@ export class AuthController {
 
   // Get current user
   static async getCurrentUser(req: Request, res: Response) {
-    logger.info('getCurrentUser called:', { 
+    logger.info({ 
       hasUser: !!req.user, 
       userId: req.user?.id,
       isAuthenticated: req.isAuthenticated?.(),
       sessionID: req.sessionID
-    });
+    }, 'getCurrentUser called');
 
     if (!req.user) {
       logger.warn('No user in request object');
@@ -564,11 +625,11 @@ export class AuthController {
       });
 
       if (!user) {
-        logger.error('User not found in database:', { userId: req.user.id });
+        logger.error({ userId: req.user.id }, 'User not found in database');
         return res.status(404).json({ message: 'User not found' });
       }
 
-      logger.info('User found successfully:', { userId: user.id, email: user.email });
+      logger.info({ userId: user.id, email: user.email }, 'User found successfully');
 
       // Remove sensitive data
       const { password, ...userWithoutPassword } = user;
@@ -638,22 +699,22 @@ export class AuthController {
 
         if (req.session) {
           // Use passport's logout helper and destroy the session
-          req.logout(() => {
+          req.logout((logoutErr) => {
+            if (logoutErr) {
+              logger.error('Logout error');
+              return res.status(500).json({ message: 'Failed to complete logout' });
+            }
             req.session!.destroy((err) => {
               if (err) {
-                logger.error({ error: err }, 'Session destruction error during logout:');
+                logger.error('Session destruction error during logout');
                 return res.status(500).json({ message: 'Failed to complete logout' });
               }
-              // Clear the session cookie with the same options used when setting it
-              res.clearCookie('sid', {
-                path: '/',
-                httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: 'lax',
-                domain: process.env.COOKIE_DOMAIN || undefined,
-              });
-              // Also clear CSRF token
+              // Clear all authentication-related cookies
+              const cookieOptions = getSecureCookieOptions();
+              res.clearCookie('sid', cookieOptions);
+              res.clearCookie('connect.sid', cookieOptions);
               res.clearCookie('csrf_token', { path: '/' });
+              res.clearCookie('utm_params', { path: '/' });
               return res.json({ message: 'Logged out successfully' });
             });
           });
@@ -678,15 +739,12 @@ export class AuthController {
         })
         .where(eq(userDevices.refreshToken, tokenHash));
 
-      // Clear cookies for token-based logout as well (best-effort)
-      res.clearCookie('sid', {
-        path: '/',
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        domain: process.env.COOKIE_DOMAIN || undefined,
-      });
+      // Clear all authentication-related cookies for token-based logout
+      const cookieOptions = getSecureCookieOptions();
+      res.clearCookie('sid', cookieOptions);
+      res.clearCookie('connect.sid', cookieOptions);
       res.clearCookie('csrf_token', { path: '/' });
+      res.clearCookie('utm_params', { path: '/' });
 
       // Log the logout
       if (req.user) {

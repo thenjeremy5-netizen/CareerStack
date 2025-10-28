@@ -7,11 +7,19 @@ import { eq, and, lt } from 'drizzle-orm';
 import { sendEmail as sendEmailNodemailer, emailTemplates } from '../utils/email';
 import bcrypt from 'bcryptjs';
 import { logger } from '../utils/logger';
+import { SECURITY_CONFIG, validateSecurityEnvironment } from '../config/security';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'your-refresh-secret-key';
-const ACCESS_TOKEN_EXPIRY = '15m';
-const REFRESH_TOKEN_EXPIRY = '24h';
+// Validate security environment on module load
+validateSecurityEnvironment();
+
+const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET;
+
+if (!JWT_SECRET || !JWT_REFRESH_SECRET) {
+  throw new Error('JWT_SECRET and JWT_REFRESH_SECRET environment variables are required');
+}
+const ACCESS_TOKEN_EXPIRY = SECURITY_CONFIG.JWT.ACCESS_TOKEN_EXPIRY;
+const REFRESH_TOKEN_EXPIRY = SECURITY_CONFIG.JWT.REFRESH_TOKEN_EXPIRY;
 
 export class AuthService {
   // Generate JWT access token
@@ -19,16 +27,19 @@ export class AuthService {
     return jwt.sign({ userId }, JWT_SECRET, { expiresIn: ACCESS_TOKEN_EXPIRY });
   }
 
-  // Hash password
+  // Hash password with secure salt rounds
   static async hashPassword(password: string): Promise<string> {
-    const salt = await bcrypt.genSalt(12);
+    const salt = await bcrypt.genSalt(SECURITY_CONFIG.PASSWORD.BCRYPT_ROUNDS);
     return bcrypt.hash(password, salt);
   }
 
   // Generate a short-lived temp token for 2FA that encodes the code
   static async generate2FACode(userId: string, code: string): Promise<string> {
-    // 10-minute expiry for the 2FA code token
-    return jwt.sign({ userId, code }, JWT_SECRET, { expiresIn: '10m' });
+    return jwt.sign(
+      { userId, code, iat: Math.floor(Date.now() / 1000) }, 
+      JWT_SECRET, 
+      { expiresIn: SECURITY_CONFIG.JWT.TWO_FA_TOKEN_EXPIRY }
+    );
   }
 
   // Verify temp token and return payload
@@ -44,7 +55,7 @@ export class AuthService {
 
   // Generate refresh token and store it in the database
   static async generateRefreshToken(userId: string, userAgent: string, ipAddress: string) {
-    const refreshToken = randomBytes(40).toString('hex');
+    const refreshToken = randomBytes(SECURITY_CONFIG.TOKENS.REFRESH_TOKEN_BYTES).toString('hex');
     const tokenHash = createHash('sha256').update(refreshToken).digest('hex');
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
 
@@ -163,17 +174,17 @@ export class AuthService {
     });
   }
 
-  // Generate email verification token
+  // Generate email verification token with secure random bytes
   static generateEmailVerificationToken(): { token: string; tokenHash: string; expiresAt: Date } {
-    const token = randomBytes(32).toString('hex');
+    const token = randomBytes(SECURITY_CONFIG.TOKENS.EMAIL_VERIFICATION_BYTES).toString('hex');
     const tokenHash = createHash('sha256').update(token).digest('hex');
     const expiresAt = addHours(new Date(), 24); // 24 hours from now
     return { token, tokenHash, expiresAt };
   }
 
-  // Generate password reset token
+  // Generate password reset token with secure random bytes
   static generatePasswordResetToken(): { token: string; tokenHash: string; expiresAt: Date } {
-    const token = randomBytes(32).toString('hex');
+    const token = randomBytes(SECURITY_CONFIG.TOKENS.PASSWORD_RESET_BYTES).toString('hex');
     const tokenHash = createHash('sha256').update(token).digest('hex');
     const expiresAt = addHours(new Date(), 1); // 1 hour from now
     return { token, tokenHash, expiresAt };
