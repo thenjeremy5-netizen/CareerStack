@@ -38,13 +38,7 @@
     "generate:quick-consultants": "npx tsx scripts/quick-consultants-generator.ts",
     "docker:logs": "docker-compose logs -f",
     "docker:down": "docker-compose down",
-    "docker:clean": "docker-compose down -v --remove-orphans",
-    "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui",
-    "test:e2e:headed": "playwright test --headed",
-    "test:install": "playwright install",
-    "test:setup": "npx tsx scripts/create-test-user.ts",
-    "test:reset": "npx tsx scripts/reset-test-environment.ts"
+    "docker:clean": "docker-compose down -v --remove-orphans"
   },
   "dependencies": {
     "@harbour-enterprises/superdoc": "^0.22.3",
@@ -162,7 +156,6 @@
     "zod-validation-error": "^3.4.0"
   },
   "devDependencies": {
-    "@playwright/test": "^1.56.1",
     "@types/bcryptjs": "^2.4.6",
     "@types/connect-pg-simple": "^7.0.3",
     "@types/express": "4.17.21",
