@@ -1,17 +1,34 @@
 import { test, expect, Page, BrowserContext } from '@playwright/test';
 
 const TEST_USER = {
-  email: 'test@example.com',
-  password: 'testpassword123'
+  email: '12shivamtiwari219@gmail.com',
+  password: 'Rahulr@1234'
 };
 
 // Helper to login manually
 async function loginUser(page: Page) {
-  await page.goto('http://localhost:5000/login');
+  // Navigate to login page and wait for it to load
+  await page.goto('http://localhost:5000/login', { waitUntil: 'networkidle' });
+  
+  // Wait for key form elements with a 5 second timeout
+  await Promise.all([
+    page.waitForSelector('input[type="email"]', { timeout: 5000 }),
+    page.waitForSelector('input[type="password"]', { timeout: 5000 }),
+    page.waitForSelector('button[type="submit"]', { timeout: 5000 })
+  ]);
+  
+  // Fill form and submit
   await page.fill('input[type="email"]', TEST_USER.email);
   await page.fill('input[type="password"]', TEST_USER.password);
-  await page.click('button[type="submit"]');
-  await page.waitForTimeout(3000);
+  
+  // Click submit and wait for navigation
+  await Promise.all([
+    page.waitForNavigation({ waitUntil: 'networkidle', timeout: 10000 }),
+    page.click('button[type="submit"]')
+  ]);
+  
+  // Additional wait for client-side rendering
+  await page.waitForTimeout(1000);
 }
 
 test.describe('Comprehensive Logout Bug Detection', () => {

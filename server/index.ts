@@ -47,14 +47,21 @@ app.use(
     contentSecurityPolicy: process.env.NODE_ENV === 'production' ? {
       directives: {
         ...helmet.contentSecurityPolicy.getDefaultDirectives(),
-        "script-src": ["'self'"],
-        "img-src": ["'self'", "data:", "blob:", "https:", "http:"],
-        "script-src-elem": ["'self'"],
-        "worker-src": ["'self'", "blob:"],
+        "default-src": ["'self'"],
+        "script-src": ["'self'", "'strict-dynamic'"],
+        "script-src-elem": ["'self'", "'strict-dynamic'"],
         "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
         "style-src-elem": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
         "font-src": ["'self'", "data:", "https://fonts.gstatic.com"],
-        "connect-src": ["'self'", "wss:"],
+        "img-src": ["'self'", "data:", "blob:", "https:"],
+        "media-src": ["'self'"],
+        "connect-src": ["'self'", "wss:", "https:"],
+        "frame-src": ["'none'"],
+        "object-src": ["'none'"],
+        "base-uri": ["'self'"],
+        "form-action": ["'self'"],
+        "frame-ancestors": ["'none'"],
+        "upgrade-insecure-requests": [],
       },
     } : {
       directives: {

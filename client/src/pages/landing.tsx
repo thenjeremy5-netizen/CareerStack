@@ -34,18 +34,18 @@ export default function Landing() {
     }
   );
 
-  // Redirect authenticated users to dashboard
-  useEffect(() => {
-    if (isAuthenticated && !isLoading) {
-      console.log('User is authenticated, redirecting to dashboard');
-      window.location.href = '/dashboard';
-    }
-  }, [isAuthenticated, isLoading]);
-
   // Show loading only while checking auth, not during redirect
   if (isLoading) {
     return <PageLoader variant="branded" text="Loading..." />;
   }
+
+  // Redirect authenticated users to dashboard
+  useEffect(() => {
+    if (isAuthenticated) {
+      console.log('User is authenticated, redirecting to dashboard');
+      window.location.href = '/dashboard';
+    }
+  }, [isAuthenticated]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -57,9 +57,7 @@ export default function Landing() {
               <div className="h-10 w-10 bg-gradient-to-br from-primary to-accent rounded-xl flex items-center justify-center shadow-lg">
                 <FileText className="text-white" size={20} />
               </div>
-              <h1 className="text-xl font-bold text-foreground tracking-tight">
-                CareerStack
-              </h1>
+              <h1 className="text-xl font-bold text-foreground tracking-tight">CareerStack</h1>
             </div>
 
             <div className="flex gap-3">

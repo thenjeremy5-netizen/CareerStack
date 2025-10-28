@@ -171,20 +171,88 @@ export const requireRole = (allowedRoles: string | string[]) => {
   };
 };
 
-// Check if user is authenticated using session-based auth
+// Check if user is authenticated using session or JWT
 export const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
-  // Check if user is authenticated via session
+  // First check session auth
   if (req.isAuthenticated && req.isAuthenticated()) {
     return next();
   }
   
-  // If no session auth, return 401
-  res.status(401).json({ 
-    message: 'Authentication required',
-    category: 'auth',
-    recoverable: true,
-    details: 'Please log in to access this resource'
+  // Then check JWT auth
+  const authHeader = req.headers.authorization;
+  if (authHeader) {
+    const token = authHeader.split(' ')[1];
+    if (token) {
+      try {
+        // Verify JWT
+        jwt.verify(token, JWT_SECRET, async (err, decoded) => {
+          if (err) {
+            logger.warn({ error: err.message }, 'JWT verification failed');
+            return res.status(403).json({ message: 'Invalid token' });
+          }
+          
+          try {
+            // Check if user exists and is active
+            const user = await db.query.users.findFirst({
+              where: (users, { eq, and, isNull, or, lt }) => 
+                and(
+                  eq(users.id, (decoded as any).userId),
+                  or(
+                    isNull(users.accountLockedUntil),
+                    lt(users.accountLockedUntil as any, new Date())
+                  )
+                ),
+              columns: {
+                id: true,
+                email: true,
+                emailVerified: true,
+                twoFactorEnabled: true,
+              },
+            });
+            
+            if (!user) {
+              logger.warn({ userId: (decoded as any).userId }, 'User not found or account is locked');
+              return res.status(401).json({ message: 'User not found or account is locked' });
+            }
+            
+            // Attach user to request
+            req.user = user;
+            return next();
+          } catch (error) {
+            logger.error({ error }, 'Authentication database error');
+            return res.status(500).json({ message: 'Authentication failed' });
+          }
+        });
+        return; // Important: stop execution here while JWT verification is async
+      } catch (error) {
+        logger.error({ error }, 'JWT verification error');
+      }
+    }
+  }
+  
+  // Check if request expects JSON
+  const wantsJson = req.xhr || req.headers.accept?.includes('application/json');
+  
+  console.log('Auth middleware: Unauthenticated request', {
+    path: req.path,
+    wantsJson,
+    accept: req.headers.accept,
+    isXHR: req.xhr
   });
+  
+  if (wantsJson) {
+    // API requests get JSON response
+    res.status(401).json({ 
+      message: 'Authentication required',
+      category: 'auth',
+      recoverable: true,
+      details: 'Please log in to access this resource'
+    });
+  } else {
+    // Browser requests get redirect
+    console.log('Redirecting to /login');
+    res.redirect('/login');
+  }
 };
 
 // Check if user has verified email

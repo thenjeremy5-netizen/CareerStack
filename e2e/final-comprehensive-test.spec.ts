@@ -21,9 +21,21 @@ test.describe('Final Comprehensive Authentication Test', () => {
     console.log('✅ Correctly redirected to login page');
     
     console.log('✅ Test 2: Login redirects to dashboard (not original page)');
+    // Wait for key form elements
+    await Promise.all([
+      page.waitForSelector('input[type="email"]', { timeout: 5000 }),
+      page.waitForSelector('input[type="password"]', { timeout: 5000 }),
+      page.waitForSelector('button[type="submit"]', { timeout: 5000 })
+    ]);
+    
+    // Fill form and submit with navigation wait
     await page.fill('input[type="email"]', '12shivamtiwari219@gmail.com');
     await page.fill('input[type="password"]', 'Rahulr@1234');
-    await page.click('button[type="submit"]');
+    
+    await Promise.all([
+      page.waitForNavigation({ waitUntil: 'networkidle', timeout: 10000 }),
+      page.click('button[type="submit"]')
+    ]);
     
     await page.waitForTimeout(5000);
     const afterLoginUrl = page.url();

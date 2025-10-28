@@ -25,28 +25,45 @@ export function useAuth() {
   // Check if we should prevent auth requests (but don't return early)
   const shouldPreventAuth = authCircuitBreaker.isCircuitOpen() || authGlobalState.shouldPreventAuthRequest();
 
+  // Cache key for unauthorized status
+  const unauthorizedCacheKey = 'auth:unauthorized';
+  const unauthorizedUntil = React.useRef<number>(0);
+
+  // Track critical errors that should be reported
+  const [criticalError, setCriticalError] = React.useState<Error | null>(null);
+
   const { data: user, isLoading, error } = useQuery<User>({
     queryKey: ["/api/auth/user"],
     queryFn: async () => {
       try {
+        // Check if we're in unauthorized cooldown
+        if (Date.now() < unauthorizedUntil.current) {
+          throw new Error("UNAUTHORIZED");
+        }
+
         // Record that we're making an auth request
         authGlobalState.recordAuthRequest();
 
         const response = await fetch("/api/auth/user", {
           credentials: "include",
           headers: {
-            "X-Requested-With": "XMLHttpRequest"
+            "X-Requested-With": "XMLHttpRequest",
+            "Cache-Control": "no-cache"
           },
           redirect: 'manual' // Don't follow redirects automatically
         });
 
         // Handle redirects manually
         if (response.status === 302 || response.status === 301) {
+          // Set unauthorized cooldown for 5 seconds
+          unauthorizedUntil.current = Date.now() + 5000;
           throw new Error("UNAUTHORIZED");
         }
 
         if (!response.ok) {
           if (response.status === 401 || response.status === 403) {
+            // Set unauthorized cooldown for 5 seconds
+            unauthorizedUntil.current = Date.now() + 5000;
             throw new Error("UNAUTHORIZED");
           }
           if (response.status === 404) {
@@ -58,7 +75,8 @@ export function useAuth() {
         const data = await response.json();
         authCircuitBreaker.recordSuccess();
 
-        // Clear any auth loop flags on successful authentication
+        // Clear unauthorized status and auth loop flags on successful authentication
+        unauthorizedUntil.current = 0;
         localStorage.removeItem('authLoopDetected');
         localStorage.removeItem('lastAuthLoopReset');
         localStorage.removeItem('lastAuthRedirect');
@@ -71,58 +89,80 @@ export function useAuth() {
           throw new Error("NETWORK_ERROR");
         }
         
-        // Only record failures for actual network/server errors, not auth failures
+        // Record failures for network errors only
         if (error.message === 'NETWORK_ERROR') {
           authCircuitBreaker.recordFailure();
         }
+
+        // Cache unauthorized status
+        if (error.message === 'UNAUTHORIZED') {
+          localStorage.setItem(unauthorizedCacheKey, 'true');
+          // Clear after 5 seconds
+          setTimeout(() => localStorage.removeItem(unauthorizedCacheKey), 5000);
+        }
+        
         throw error;
       }
     },
-    retry: (failureCount, error) => {
-      // Don't retry auth errors
-      if (error.message === 'UNAUTHORIZED' || error.message === 'USER_NOT_FOUND') {
-        return false;
-      }
-      // Retry network errors up to 2 times
-      return failureCount < 2;
-    },
-    retryDelay: 1000,
+    retry: false, // Disable retries completely
     staleTime: 30 * 1000, // 30 seconds
     gcTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     refetchInterval: false,
-    refetchOnMount: true,
-    enabled: !isDisabled && !shouldPreventAuth,
+    refetchOnMount: false, // Don't refetch on mount
+    enabled: !isDisabled && 
+             !shouldPreventAuth && 
+             !localStorage.getItem(unauthorizedCacheKey), // Don't run if recently unauthorized
   });
 
   // Simplified error handling to prevent loops
+  // Use a ref to track if we're already handling a redirect
+  const isHandlingRedirect = React.useRef(false);
+
   React.useEffect(() => {
-    if (error && error.message) {
+    if (error?.message === 'UNAUTHORIZED' && !isHandlingRedirect.current) {
       const path = window.location.pathname;
       const onAuthPages = ['/login', '/register', '/verify-email', '/', '/privacy'].includes(path);
       
-      // Only handle auth errors, ignore others to prevent loops
-      if (error.message === 'UNAUTHORIZED' && !onAuthPages) {
-        // Disable the query immediately to stop further requests
+      // Only handle unauthorized on non-auth pages
+      if (!onAuthPages) {
+        isHandlingRedirect.current = true;
+        
+        // Immediately disable query and clear state
         setIsDisabled(true);
+        queryClient.setQueryData(["/api/auth/user"], null);
         
-        // Simple throttled redirect
-        const lastRedirect = localStorage.getItem('lastAuthRedirect');
+        // Save redirect path for non-dashboard pages
+        if (path !== '/dashboard') {
+          localStorage.setItem('redirectAfterLogin', path);
+        } else {
+          localStorage.removeItem('redirectAfterLogin');
+        }
+
+        // Implement throttled redirect with backoff
+        const redirectAttempts = parseInt(localStorage.getItem('authRedirectAttempts') || '0');
         const now = Date.now();
-        
-        if (!lastRedirect || (now - parseInt(lastRedirect)) > 5000) {
-          localStorage.setItem('lastAuthRedirect', now.toString());
-          // Clear the query data to prevent stale state
-          queryClient.setQueryData(["/api/auth/user"], null);
-          // Only store redirect path for non-dashboard pages to prevent unwanted redirects
-          if (path !== '/dashboard') {
-            localStorage.setItem('redirectAfterLogin', path);
-          } else {
-            localStorage.removeItem('redirectAfterLogin');
-          }
+        const lastRedirect = parseInt(localStorage.getItem('globalAuthRedirect') || '0');
+        const backoffTime = Math.min(5000 * Math.pow(2, redirectAttempts), 30000); // Max 30s backoff
+
+        if (now - lastRedirect > backoffTime) {
+          // Increment redirect attempts
+          localStorage.setItem('authRedirectAttempts', (redirectAttempts + 1).toString());
+          localStorage.setItem('globalAuthRedirect', now.toString());
+          
+          // Clear attempts after 1 minute of no redirects
+          setTimeout(() => {
+            localStorage.removeItem('authRedirectAttempts');
+          }, 60000);
+
           window.location.href = '/login';
         }
+
+        // Reset handling flag after max backoff time
+        setTimeout(() => {
+          isHandlingRedirect.current = false;
+        }, backoffTime);
       }
     }
   }, [error, queryClient]);
@@ -169,7 +209,11 @@ export function useAuth() {
 
   const logout = async () => {
     try {
-      // Show logout message immediately
+      // Immediately disable queries to prevent flashing
+      setIsDisabled(true);
+      queryClient.setQueryData(["/api/auth/user"], null);
+      
+      // Show logout message
       toast({
         title: "Logging out...",
         description: "Please wait a moment.",
@@ -181,7 +225,16 @@ export function useAuth() {
         .find(row => row.startsWith('csrf_token='))
         ?.split('=')[1];
 
-      // Wait for server logout to complete
+      // Clear local session first to prevent UI flashing
+      await clearLocalSession();
+      
+      // Clear all queries immediately
+      queryClient.clear();
+
+      // Call server logout in the background
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      
       try {
         await fetch("/api/auth/logout", {
           method: "POST",
@@ -190,39 +243,30 @@ export function useAuth() {
             "Content-Type": "application/json",
             "X-CSRF-Token": csrfToken || "",
           },
-          timeout: 5000, // 5 second timeout
+          signal: controller.signal,
         });
       } catch (serverError) {
-        console.warn("Server logout failed, proceeding with local cleanup:", serverError);
+        console.warn("Server logout failed:", serverError);
+      } finally {
+        clearTimeout(timeoutId);
       }
 
-      // Clear local session data after server logout
-      await clearLocalSession();
+      // Set a flag to prevent re-renders during navigation
+      localStorage.setItem('isLoggingOut', 'true');
       
-      // Clear query cache
-      queryClient.setQueryData(["/api/auth/user"], null);
-      queryClient.clear();
-      
-      // Redirect after cleanup is complete
-      window.location.href = "/";
+      // Redirect to home page
+      window.location.replace("/");
       
     } catch (error) {
       console.error("Logout error:", error);
       
-      // Even on error, clear everything and redirect for security
-      try {
-        await clearLocalSession();
-        queryClient.setQueryData(["/api/auth/user"], null);
-        queryClient.clear();
-      } catch (e) {
-        console.error("Error during cleanup:", e);
-        // Force clear everything as fallback
-        localStorage.clear();
-        sessionStorage.clear();
-        queryClient.clear();
-      }
+      // Force cleanup on error
+      localStorage.clear();
+      sessionStorage.clear();
+      queryClient.clear();
       
-      window.location.href = "/";
+      // Redirect using replace to prevent history entry
+      window.location.replace("/");
     }
   };
 
@@ -285,6 +329,15 @@ export function useAuth() {
     };
   }, [user]); // Depend on user so it resets when authentication state changes
 
+  // Handle non-auth errors that should be reported
+  React.useEffect(() => {
+    if (error && error.message !== 'UNAUTHORIZED' && error.message !== 'CIRCUIT_BREAKER_OPEN') {
+      const errorWithContext = new Error(`Authentication Error: ${error.message}`);
+      errorWithContext.stack = `${error.stack}\n\nContext:\nURL: ${window.location.href}\nTimestamp: ${new Date().toISOString()}\nUser Agent: ${navigator.userAgent}`;
+      throw errorWithContext;
+    }
+  }, [error]);
+
   // If auth is prevented by circuit breaker, return unauthenticated state
   if (shouldPreventAuth) {
     return {
@@ -302,10 +355,36 @@ export function useAuth() {
     user,
     isLoading,
     isAuthenticated: !!user,
-    isAuthChecked: !isLoading && (!!user || !!error), // Auth has been checked if not loading and we have user or error
+    isAuthChecked: !isLoading && (!!user || !!error),
     error,
     logout,
     refreshUser,
+    reportError: async (errorToReport: Error) => {
+      try {
+        const response = await fetch('/api/error-reports', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            errorMessage: errorToReport.message,
+            errorStack: errorToReport.stack,
+            url: window.location.href,
+            userAgent: navigator.userAgent,
+            userId: user?.id,
+            userEmail: user?.email,
+          }),
+          credentials: 'include',
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to submit error report');
+        }
+      } catch (e) {
+        console.error('Failed to submit error report:', e);
+        throw e;
+      }
+    },
   };
 }
 

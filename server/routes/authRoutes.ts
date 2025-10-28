@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { AuthController } from '../controllers/authController';
-import { isAuthenticated as isSessionAuthenticated } from '../localAuth';
+import { isAuthenticated } from '../middleware/auth';
 
 const router = Router();
 
@@ -13,11 +13,11 @@ router.post('/forgot-password', AuthController.requestPasswordReset); // Alias f
 router.post('/reset-password', AuthController.resetPassword);
 router.post('/resend-verification', AuthController.resendVerification);
 
-// Protected routes (session-based)
-router.get('/me', isSessionAuthenticated as any, AuthController.getCurrentUser);
-router.get('/user', isSessionAuthenticated as any, AuthController.getCurrentUser);
-router.post('/logout', isSessionAuthenticated as any, AuthController.logout);
-router.get('/devices', isSessionAuthenticated as any, AuthController.getUserDevices);
-router.delete('/devices/:deviceId', isSessionAuthenticated as any, AuthController.revokeDevice);
+// Protected routes (using combined session and JWT auth)
+router.get('/me', isAuthenticated, AuthController.getCurrentUser);
+router.get('/user', isAuthenticated, AuthController.getCurrentUser);
+router.post('/logout', isAuthenticated, AuthController.logout);
+router.get('/devices', isAuthenticated, AuthController.getUserDevices);
+router.delete('/devices/:deviceId', isAuthenticated, AuthController.revokeDevice);
 
 export default router;
