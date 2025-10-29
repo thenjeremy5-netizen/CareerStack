@@ -111,7 +111,7 @@ router.get('/emails/threads/sent', isAuthenticated, marketingRateLimiter, asyncH
       .orderBy(desc(emailMessages.sentAt));
     res.json(threads);
   } catch (error) {
-    logger.error('Error fetching sent threads: ' + String(error));
+    logger.error({ error: String(error) }, 'Error fetching sent threads');
     res.status(500).json({ error: 'Failed to fetch sent threads' });
   }
 }));
@@ -128,7 +128,7 @@ router.get('/emails/threads/snoozed', isAuthenticated, marketingRateLimiter, asy
       .orderBy(desc(emailThreads.lastMessageAt));
     res.json(threads);
   } catch (error) {
-    logger.error('Error fetching snoozed threads: ' + String(error));
+    logger.error({ error: String(error) }, 'Error fetching snoozed threads');
     res.status(500).json({ error: 'Failed to fetch snoozed threads' });
   }
 }));
@@ -144,7 +144,7 @@ router.get('/emails/threads/drafts', isAuthenticated, marketingRateLimiter, asyn
       .orderBy(desc(emailMessages.updatedAt));
     res.json(threads);
   } catch (error) {
-    logger.error('Error fetching draft threads: ' + String(error));
+    logger.error({ error: String(error) }, 'Error fetching draft threads');
     res.status(500).json({ error: 'Failed to fetch draft threads' });
   }
 }));
@@ -160,7 +160,7 @@ router.get('/emails/threads/starred', isAuthenticated, marketingRateLimiter, asy
       .orderBy(desc(emailMessages.updatedAt));
     res.json(threads);
   } catch (error) {
-    logger.error('Error fetching starred threads: ' + String(error));
+    logger.error({ error: String(error) }, 'Error fetching starred threads');
     res.status(500).json({ error: 'Failed to fetch starred threads' });
   }
 }));
@@ -209,7 +209,7 @@ router.delete('/emails/threads/:threadId', isAuthenticated, writeOperationsRateL
     await logDelete(req.user.id, 'emailThread', threadId, { id: threadId });
     res.json({ success: true });
   } catch (error) {
-    logger.error('Error deleting thread: ' + String(error));
+    logger.error({ error: String(error) }, 'Error deleting thread');
     res.status(500).json({ error: 'Failed to delete thread' });
   }
 }));
@@ -248,7 +248,7 @@ router.get('/oauth/gmail/callback', async (req, res) => {
     res.setHeader('Content-Type', 'text/html');
     return res.status(success ? 200 : 400).send(html);
   } catch (error) {
-    logger.error({ error: error }, 'Error handling public Gmail callback:');
+    logger.error({ error: String(error) }, 'Error handling public Gmail callback');
     res.status(500).send('<html><body>Failed to process Gmail authorization</body></html>');
   }
 });
@@ -285,7 +285,7 @@ router.get('/oauth/outlook/callback', async (req, res) => {
     res.setHeader('Content-Type', 'text/html');
     return res.status(success ? 200 : 400).send(html);
   } catch (error) {
-    logger.error({ error: error }, 'Error handling public Outlook callback:');
+    logger.error({ error: String(error) }, 'Error handling public Outlook callback');
     res.status(500).send('<html><body>Failed to process Outlook authorization</body></html>');
   }
 });
@@ -331,7 +331,7 @@ const requireMarketingRole = async (req: any, res: any, next: any) => {
 
     next();
   } catch (error) {
-    logger.error({ error: error }, 'Marketing role check error:');
+    logger.error({ error: String(error) }, 'Marketing role check error');
     return res.status(500).json({ message: 'Authorization check failed' });
   }
 };
@@ -436,7 +436,7 @@ router.get('/consultants', async (req, res) => {
       }
     });
   } catch (error) {
-    logger.error({ error: error }, 'Error fetching consultants:');
+    logger.error({ error: String(error) }, 'Error fetching consultants');
     res.status(500).json({ message: 'Failed to fetch consultants' });
   }
 });
@@ -471,7 +471,7 @@ router.get('/consultants/:id', async (req, res) => {
 
     res.json(consultant);
   } catch (error) {
-    logger.error({ error: error }, 'Error fetching consultant:');
+    logger.error({ error: String(error) }, 'Error fetching consultant');
     res.status(500).json({ message: 'Failed to fetch consultant' });
   }
 });
@@ -538,7 +538,7 @@ router.post('/consultants', conditionalCSRF, writeOperationsRateLimiter, async (
     
     res.status(201).json(responseData);
   } catch (error) {
-    logger.error({ error: error }, 'Error creating consultant:');
+    logger.error({ error: String(error) }, 'Error creating consultant');
     if (error instanceof z.ZodError) {
       return res.status(400).json({ message: 'Invalid data', errors: error.errors });
     }
@@ -621,7 +621,7 @@ router.patch('/consultants/:id', conditionalCSRF, writeOperationsRateLimiter, as
 
     res.json(responseData);
   } catch (error) {
-    logger.error({ error: error }, 'Error updating consultant:');
+    logger.error({ error: String(error) }, 'Error updating consultant');
     if (error instanceof z.ZodError) {
       return res.status(400).json({ message: 'Invalid data', errors: error.errors });
     }
@@ -672,7 +672,7 @@ router.delete('/consultants/:id', conditionalCSRF, writeOperationsRateLimiter, a
 
     res.json({ message: 'Consultant deleted successfully' });
   } catch (error) {
-    logger.error({ error: error }, 'Error deleting consultant:');
+    logger.error({ error: String(error) }, 'Error deleting consultant');
     res.status(500).json({ message: 'Failed to delete consultant' });
   }
 });
@@ -749,7 +749,7 @@ router.get('/requirements', async (req, res) => {
       }
     });
   } catch (error) {
-    logger.error({ error: error }, 'Error fetching requirements:');
+    logger.error({ error: String(error) }, 'Error fetching requirements');
     res.status(500).json({ message: 'Failed to fetch requirements' });
   }
 });
@@ -774,7 +774,7 @@ router.get('/requirements/:id', async (req, res) => {
 
     res.json(requirement);
   } catch (error) {
-    logger.error({ error: error }, 'Error fetching requirement:');
+    logger.error({ error: String(error) }, 'Error fetching requirement');
     res.status(500).json({ message: 'Failed to fetch requirement' });
   }
 });
@@ -832,7 +832,7 @@ router.post('/requirements', conditionalCSRF, writeOperationsRateLimiter, async 
       res.status(201).json(newRequirements);
     }
   } catch (error) {
-    logger.error({ error: error }, 'Error creating requirements:');
+    logger.error({ error: String(error) }, 'Error creating requirements');
     if (error instanceof z.ZodError) {
       return res.status(400).json({ message: 'Invalid data', errors: error.errors });
     }
@@ -869,7 +869,7 @@ router.patch('/requirements/:id', conditionalCSRF, writeOperationsRateLimiter, a
 
     res.json(updatedRequirement);
   } catch (error) {
-    logger.error({ error: error }, 'Error updating requirement:');
+    logger.error({ error: String(error) }, 'Error updating requirement');
     if (error instanceof z.ZodError) {
       return res.status(400).json({ message: 'Invalid data', errors: error.errors });
     }
@@ -918,7 +918,7 @@ router.post('/requirements/:id/comments', conditionalCSRF, async (req, res) => {
 
     res.json(updatedRequirement);
   } catch (error) {
-    logger.error({ error: error }, 'Error adding comment:');
+    logger.error({ error: String(error) }, 'Error adding comment');
     res.status(500).json({ message: 'Failed to add comment' });
   }
 });
@@ -947,7 +947,7 @@ router.delete('/requirements/:id', conditionalCSRF, writeOperationsRateLimiter, 
 
     res.json({ message: 'Requirement deleted successfully' });
   } catch (error) {
-    logger.error({ error: error }, 'Error deleting requirement:');
+    logger.error({ error: String(error) }, 'Error deleting requirement');
     res.status(500).json({ message: 'Failed to delete requirement' });
   }
 });
@@ -982,7 +982,7 @@ router.get('/requirements/:id/next-step-comments', async (req, res) => {
 
     res.json(comments);
   } catch (error) {
-    logger.error({ error: error }, 'Error fetching next step comments:');
+    logger.error({ error: String(error) }, 'Error fetching next step comments');
     res.status(500).json({ message: 'Failed to fetch next step comments' });
   }
 });
@@ -1030,7 +1030,7 @@ router.post('/requirements/:id/next-step-comments', conditionalCSRF, writeOperat
 
     res.status(201).json(commentWithUser);
   } catch (error) {
-    logger.error({ error: error }, 'Error adding next step comment:');
+    logger.error({ error: String(error) }, 'Error adding next step comment');
     if (error instanceof z.ZodError) {
       return res.status(400).json({ message: 'Invalid data', errors: error.errors });
     }
@@ -1086,7 +1086,7 @@ router.patch('/next-step-comments/:id', conditionalCSRF, writeOperationsRateLimi
 
     res.json(commentWithUser);
   } catch (error) {
-    logger.error({ error: error }, 'Error updating next step comment:');
+    logger.error({ error: String(error) }, 'Error updating next step comment');
     res.status(500).json({ message: 'Failed to update next step comment' });
   }
 });
@@ -1117,7 +1117,7 @@ router.delete('/next-step-comments/:id', conditionalCSRF, writeOperationsRateLim
 
     res.json({ message: 'Comment deleted successfully' });
   } catch (error) {
-    logger.error({ error: error }, 'Error deleting next step comment:');
+    logger.error({ error: String(error) }, 'Error deleting next step comment');
     res.status(500).json({ message: 'Failed to delete next step comment' });
   }
 });
@@ -1184,7 +1184,7 @@ router.get('/interviews', async (req, res) => {
       }
     });
   } catch (error) {
-    logger.error({ error: error }, 'Error fetching interviews:');
+    logger.error({ error: String(error) }, 'Error fetching interviews');
     res.status(500).json({ message: 'Failed to fetch interviews' });
   }
 });
@@ -1212,7 +1212,7 @@ router.get('/interviews/:id', async (req, res) => {
 
     res.json(interview);
   } catch (error) {
-    logger.error({ error: error }, 'Error fetching interview:');
+    logger.error({ error: String(error) }, 'Error fetching interview');
     res.status(500).json({ message: 'Failed to fetch interview' });
   }
 });
@@ -1239,7 +1239,7 @@ router.post('/interviews', conditionalCSRF, writeOperationsRateLimiter, async (r
     
     res.status(201).json(newInterview);
   } catch (error) {
-    logger.error({ error: error }, 'Error creating interview:');
+    logger.error({ error: String(error) }, 'Error creating interview');
     if (error instanceof z.ZodError) {
       return res.status(400).json({ message: 'Invalid data', errors: error.errors });
     }
@@ -1276,7 +1276,7 @@ router.patch('/interviews/:id', conditionalCSRF, writeOperationsRateLimiter, asy
 
     res.json(updatedInterview);
   } catch (error) {
-    logger.error({ error: error }, 'Error updating interview:');
+    logger.error({ error: String(error) }, 'Error updating interview');
     if (error instanceof z.ZodError) {
       return res.status(400).json({ message: 'Invalid data', errors: error.errors });
     }
@@ -1308,7 +1308,7 @@ router.delete('/interviews/:id', conditionalCSRF, writeOperationsRateLimiter, as
 
     res.json({ message: 'Interview deleted successfully' });
   } catch (error) {
-    logger.error({ error: error }, 'Error deleting interview:');
+    logger.error({ error: String(error) }, 'Error deleting interview');
     res.status(500).json({ message: 'Failed to delete interview' });
   }
 });
@@ -1340,7 +1340,7 @@ router.post('/oauth/gmail/callback', async (req, res) => {
       });
     }
   } catch (error) {
-    logger.error({ error: error }, 'Error handling Gmail callback:');
+    logger.error({ error: String(error) }, 'Error handling Gmail callback');
     res.status(500).json({ message: 'Failed to process Gmail authorization' });
   }
 });
@@ -1351,7 +1351,7 @@ router.get('/oauth/outlook/auth', async (req, res) => {
     const authUrl = OutlookOAuthService.getAuthUrl(req.user!.id);
     res.json({ authUrl });
   } catch (error) {
-    logger.error({ error: error }, 'Error generating Outlook auth URL:');
+    logger.error({ error: String(error) }, 'Error generating Outlook auth URL');
     res.status(500).json({ message: 'Failed to generate authorization URL' });
   }
 });
@@ -1385,7 +1385,7 @@ router.get('/oauth/outlook/callback', async (req, res) => {
     res.setHeader('Content-Type', 'text/html');
     return res.status(success ? 200 : 400).send(html);
   } catch (error) {
-    logger.error({ error: error }, 'Error handling Outlook callback (GET):');
+    logger.error({ error: String(error) }, 'Error handling Outlook callback (GET)');
     res.status(500).send('<html><body>Failed to process Outlook authorization</body></html>');
   }
 });
@@ -1414,7 +1414,7 @@ router.post('/oauth/outlook/callback', async (req, res) => {
       });
     }
   } catch (error) {
-    logger.error({ error: error }, 'Error handling Outlook callback:');
+    logger.error({ error: String(error) }, 'Error handling Outlook callback');
     res.status(500).json({ message: 'Failed to process Outlook authorization' });
   }
 });
@@ -1439,7 +1439,7 @@ router.get('/email-accounts', async (req, res) => {
 
     res.json(safeAccounts);
   } catch (error) {
-    logger.error({ error: error }, 'Error fetching email accounts:');
+    logger.error({ error: String(error) }, 'Error fetching email accounts');
     res.status(500).json({ message: 'Failed to fetch email accounts' });
   }
 });
@@ -1472,7 +1472,7 @@ router.post('/email-accounts', conditionalCSRF, async (req, res) => {
 
     res.status(201).json(safeAccount);
   } catch (error) {
-    logger.error({ error: error }, 'Error creating email account:');
+    logger.error({ error: String(error) }, 'Error creating email account');
     if (error instanceof z.ZodError) {
       return res.status(400).json({ message: 'Invalid data', errors: error.errors });
     }
@@ -1524,7 +1524,7 @@ router.patch('/email-accounts/:id', conditionalCSRF, async (req, res) => {
 
     res.json(safeAccount);
   } catch (error) {
-    logger.error({ error: error }, 'Error updating email account:');
+    logger.error({ error: String(error) }, 'Error updating email account');
     if (error instanceof z.ZodError) {
       return res.status(400).json({ message: 'Invalid data', errors: error.errors });
     }
@@ -1553,7 +1553,7 @@ router.delete('/email-accounts/:id', conditionalCSRF, async (req, res) => {
 
     res.json({ message: 'Email account deleted successfully' });
   } catch (error) {
-    logger.error({ error: error }, 'Error deleting email account:');
+    logger.error({ error: String(error) }, 'Error deleting email account');
     res.status(500).json({ message: 'Failed to delete email account' });
   }
 });
@@ -1584,7 +1584,7 @@ router.post('/email-accounts/:id/test', conditionalCSRF, async (req, res) => {
       provider: account.provider 
     });
   } catch (error) {
-    logger.error({ error: error }, 'Error testing email account:');
+    logger.error({ error: String(error) }, 'Error testing email account');
     res.status(500).json({ message: 'Failed to test email account' });
   }
 });
@@ -1627,7 +1627,7 @@ router.post('/email-accounts/:id/sync', conditionalCSRF, async (req, res) => {
       });
     }
   } catch (error) {
-    logger.error({ error: error }, 'Error syncing emails:');
+    logger.error({ error: String(error) }, 'Error syncing emails');
     res.status(500).json({ 
       message: 'Failed to sync emails',
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -1657,7 +1657,7 @@ router.get('/email-accounts/:id/mailboxes', async (req, res) => {
     
     res.json({ mailboxes });
   } catch (error) {
-    logger.error({ error: error }, 'Error getting mailboxes:');
+    logger.error({ error: String(error) }, 'Error getting mailboxes');
     res.status(500).json({ message: 'Failed to get mailboxes' });
   }
 });
@@ -1668,7 +1668,7 @@ router.get('/sync/status', async (req, res) => {
     const status = EmailSyncService.getSyncStatus();
     res.json(status);
   } catch (error) {
-    logger.error({ error: error }, 'Error getting sync status:');
+    logger.error({ error: String(error) }, 'Error getting sync status');
     res.status(500).json({ message: 'Failed to get sync status' });
   }
 });
@@ -1678,7 +1678,7 @@ router.post('/sync/start', conditionalCSRF, async (req, res) => {
     await EmailSyncService.startBackgroundSync();
     res.json({ message: 'Background sync started successfully' });
   } catch (error) {
-    logger.error({ error: error }, 'Error starting background sync:');
+    logger.error({ error: String(error) }, 'Error starting background sync');
     res.status(500).json({ message: 'Failed to start background sync' });
   }
 });
@@ -1688,7 +1688,7 @@ router.post('/sync/stop', conditionalCSRF, async (req, res) => {
     await EmailSyncService.stopBackgroundSync();
     res.json({ message: 'Background sync stopped successfully' });
   } catch (error) {
-    logger.error({ error: error }, 'Error stopping background sync:');
+    logger.error({ error: String(error) }, 'Error stopping background sync');
     res.status(500).json({ message: 'Failed to stop background sync' });
   }
 });
@@ -1712,7 +1712,7 @@ router.get('/email-accounts/:id/sync-stats', async (req, res) => {
     const stats = await EmailSyncService.getAccountSyncStats(id);
     res.json(stats);
   } catch (error) {
-    logger.error({ error: error }, 'Error getting sync stats:');
+    logger.error({ error: String(error) }, 'Error getting sync stats');
     res.status(500).json({ message: 'Failed to get sync stats' });
   }
 });
@@ -1779,7 +1779,7 @@ router.get('/emails/search', async (req, res) => {
       suggestions: searchResult.suggestions || []
     });
   } catch (error) {
-    logger.error({ error: error }, 'Error searching emails:');
+    logger.error({ error: String(error) }, 'Error searching emails');
     res.status(500).json({ message: 'Failed to search emails', error: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
@@ -1928,7 +1928,7 @@ router.get('/emails/threads', async (req, res) => {
       }
     });
   } catch (error) {
-    logger.error({ error: error }, 'Error fetching email threads:');
+    logger.error({ error: String(error) }, 'Error fetching email threads');
     res.status(500).json({ message: 'Failed to fetch email threads', error: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
@@ -1984,7 +1984,7 @@ router.get('/emails/unread-count', async (req, res) => {
 
     res.json({ unreadCount: totalUnread, perAccount });
   } catch (error) {
-    logger.error({ error: error }, 'Error fetching unread count:');
+    logger.error({ error: String(error) }, 'Error fetching unread count');
     res.status(500).json({ message: 'Failed to fetch unread count' });
   }
 });
@@ -2029,7 +2029,7 @@ router.get('/emails/threads/:threadId/messages', async (req, res) => {
 
     res.json(messages);
   } catch (error) {
-    logger.error({ error: error }, 'Error fetching messages:');
+    logger.error({ error: String(error) }, 'Error fetching messages');
     res.status(500).json({ message: 'Failed to fetch messages' });
   }
 });
@@ -2064,7 +2064,7 @@ router.patch('/emails/messages/:messageId/read', conditionalCSRF, async (req, re
     
     res.json(updatedMessage);
   } catch (error) {
-    logger.error({ error: error }, 'Error updating message read status:');
+    logger.error({ error: String(error) }, 'Error updating message read status');
     res.status(500).json({ message: 'Failed to update message' });
   }
 });
@@ -2094,7 +2094,7 @@ router.patch('/emails/threads/:threadId/read', conditionalCSRF, async (req, res)
     
     res.json({ message: 'All messages marked as read' });
   } catch (error) {
-    logger.error({ error: error }, 'Error marking thread as read:');
+    logger.error({ error: String(error) }, 'Error marking thread as read');
     res.status(500).json({ message: 'Failed to mark thread as read' });
   }
 });
@@ -2126,7 +2126,7 @@ router.patch('/emails/messages/:messageId/star', conditionalCSRF, async (req, re
     
     res.json(updatedMessage);
   } catch (error) {
-    logger.error({ error: error }, 'Error updating message star status:');
+    logger.error({ error: String(error) }, 'Error updating message star status');
     res.status(500).json({ message: 'Failed to update message' });
   }
 });
@@ -2161,7 +2161,7 @@ router.patch('/emails/threads/:threadId/archive', conditionalCSRF, async (req, r
     
     res.json(updatedThread);
   } catch (error) {
-    logger.error({ error: error }, 'Error archiving thread:');
+    logger.error({ error: String(error) }, 'Error archiving thread');
     res.status(500).json({ message: 'Failed to archive thread' });
   }
 });
@@ -2208,7 +2208,7 @@ router.post('/emails/check-deliverability', conditionalCSRF, async (req, res) =>
       report
     });
   } catch (error) {
-    logger.error({ error: error }, 'Error checking deliverability:');
+    logger.error({ error: String(error) }, 'Error checking deliverability');
     res.status(500).json({ message: 'Failed to check deliverability' });
   }
 });
@@ -2225,7 +2225,7 @@ router.post('/emails/validate-recipient', conditionalCSRF, async (req, res) => {
     const validation = EmailDeliverabilityService.validateRecipientEmail(email);
     res.json(validation);
   } catch (error) {
-    logger.error({ error: error }, 'Error validating recipient:');
+    logger.error({ error: String(error) }, 'Error validating recipient');
     res.status(500).json({ message: 'Failed to validate recipient' });
   }
 });
@@ -2236,7 +2236,7 @@ router.get('/emails/rate-limits', async (req, res) => {
     const stats = EmailRateLimiter.getUsageStats(req.user!.id);
     res.json(stats);
   } catch (error) {
-    logger.error({ error: error }, 'Error getting rate limits:');
+    logger.error({ error: String(error) }, 'Error getting rate limits');
     res.status(500).json({ message: 'Failed to get rate limits' });
   }
 });
@@ -2328,7 +2328,7 @@ router.post('/emails/send', conditionalCSRF, emailRateLimiter, upload.array('att
     // Warn if spam score is moderate
     if (spamCheck.score >= 5) {
       logger.warn(`⚠️ Email has moderate spam score: ${spamCheck.score}/10`);
-      logger.warn({ context: spamCheck.issues }, 'Issues:');
+      logger.warn({ issues: spamCheck.issues.map(i => String(i)) }, 'Spam check issues');
     }
 
     // Sanitize HTML to prevent spam issues
@@ -2464,7 +2464,7 @@ router.post('/emails/send', conditionalCSRF, emailRateLimiter, upload.array('att
       sendResult,
     });
   } catch (error) {
-    logger.error({ error: error }, 'Error sending email:');
+    logger.error({ error: String(error) }, 'Error sending email');
     res.status(500).json({ message: 'Failed to send email' });
   }
 });
@@ -2489,7 +2489,7 @@ router.post('/emails/drafts', conditionalCSRF, async (req, res) => {
 
     res.status(201).json(draftMessage);
   } catch (error) {
-    logger.error({ error: error }, 'Error saving draft:');
+    logger.error({ error: String(error) }, 'Error saving draft');
     res.status(500).json({ message: 'Failed to save draft' });
   }
 });
@@ -2507,7 +2507,7 @@ router.get('/emails/drafts', async (req, res) => {
 
     res.json(drafts);
   } catch (error) {
-    logger.error({ error: error }, 'Error fetching drafts:');
+    logger.error({ error: String(error) }, 'Error fetching drafts');
     res.status(500).json({ message: 'Failed to fetch drafts' });
   }
 });

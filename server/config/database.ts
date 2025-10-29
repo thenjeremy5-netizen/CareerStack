@@ -33,7 +33,10 @@ const poolConfig: PoolConfig = {
   
   // SSL configuration for production
   ssl: process.env.NODE_ENV === 'production' ? {
-    rejectUnauthorized: false, // Set to true with proper certs in production
+    rejectUnauthorized: true,
+    ca: process.env.DB_SSL_CA,
+    cert: process.env.DB_SSL_CERT,
+    key: process.env.DB_SSL_KEY
   } : false,
 };
 

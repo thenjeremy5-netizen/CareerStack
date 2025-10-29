@@ -5,14 +5,15 @@ async function testSession() {
     console.log('1. Testing login...');
     
     // First, login to get session cookie
-    const loginResponse = await fetch('http://localhost:5000/api/auth/login', {
+    const baseUrl = process.env.TEST_BASE_URL || 'http://localhost:5000';
+    const loginResponse = await fetch(`${baseUrl}/api/auth/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        email: 'test@example.com',
-        password: 'testpassword123'
+        email: process.env.TEST_EMAIL || 'test@example.com',
+        password: process.env.TEST_PASSWORD || 'testpassword123'
       })
     });
 
@@ -40,7 +41,7 @@ async function testSession() {
     console.log('2. Testing user endpoint with session cookie...');
     
     // Now test the user endpoint with the session cookie
-    const userResponse = await fetch('http://localhost:5000/api/auth/user', {
+    const userResponse = await fetch(`${baseUrl}/api/auth/user`, {
       headers: {
         'Cookie': sessionCookie
       }

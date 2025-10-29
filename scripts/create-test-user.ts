@@ -4,8 +4,8 @@ import { AuthService } from '../server/services/authService';
 import { eq } from 'drizzle-orm';
 
 const TEST_USER = {
-  email: 'test@example.com',
-  password: 'testpassword123',
+  email: process.env.TEST_EMAIL || 'test@example.com',
+  password: process.env.TEST_PASSWORD || 'testpassword123',
   firstName: 'Test',
   lastName: 'User',
   pseudoName: 'TestUser'

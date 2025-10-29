@@ -34,7 +34,7 @@ const redisConfig: RedisOptions = {
   commandTimeout: 5000,
   
   // Authentication
-  password: REDIS_PASSWORD,
+  ...(REDIS_PASSWORD && { password: REDIS_PASSWORD }),
 };
 
 // Create Redis clients

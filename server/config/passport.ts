@@ -4,9 +4,10 @@ import { users, User } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import { compare } from 'bcryptjs';
 import { logger } from '../utils/logger';
+import { SECURITY_CONFIG } from '../config/security';
 
-const MAX_LOGIN_ATTEMPTS = 5;
-const LOCK_DURATION_MS = 15 * 60 * 1000; // 15 minutes
+const MAX_LOGIN_ATTEMPTS = SECURITY_CONFIG.RATE_LIMITS.LOGIN_ATTEMPTS;
+const LOCK_DURATION_MS = SECURITY_CONFIG.RATE_LIMITS.LOGIN_WINDOW_MS;
 
 export function configurePassport(passport: any) {
   // Local strategy for username/password authentication
@@ -19,19 +20,19 @@ export function configurePassport(passport: any) {
       },
       async (req, email, password, done) => {
         try {
-          logger.info('Passport strategy executing:', { email, hasPassword: !!password });
+          const sanitizedEmail = email ? email.replace(/[\r\n\t]/g, '') : 'undefined';
+          logger.info('Passport strategy executing', { hasEmail: !!email, hasPassword: !!password });
           
           // Find user by email
           const user = await db.query.users.findFirst({
             where: eq(users.email, email.toLowerCase()),
           });
 
-          logger.info('User lookup result:', { found: !!user, email });
+          logger.info('User lookup completed', { found: !!user });
 
           // If user not found
           if (!user) {
-            logger.warn('User not found:', { email });
-            return done(null, false, { message: 'Invalid email or password' });
+            return done(null, false, { message: 'Invalid credentials' });
           }
 
           // If account is locked
@@ -55,27 +56,25 @@ export function configurePassport(passport: any) {
               })
               .where(eq(users.id, user.id));
 
-            return done(null, false, { message: shouldLock ? 'Account locked due to multiple failed attempts. Try again later.' : 'Invalid email or password' });
+            return done(null, false, { message: shouldLock ? 'Account temporarily locked. Try again later.' : 'Invalid credentials' });
           }
 
           // If email is not verified
           if (!user.emailVerified) {
-            logger.warn('Email not verified:', { email, userId: user.id });
             return done(null, false, {
-              message: 'Please verify your email before logging in.',
+              message: 'Account verification required.',
               requiresVerification: true,
             } as any);
           }
 
           // Check approval status
           if (user.approvalStatus !== 'approved') {
-            logger.warn('User not approved:', { email, userId: user.id, approvalStatus: user.approvalStatus });
             return done(null, false, {
-              message: 'Account pending approval.',
+              message: 'Account access restricted.',
             });
           }
 
-          logger.info('User passed all checks:', { email, userId: user.id });
+          logger.info('User authentication successful', { userId: user.id });
 
           // Reset failed login attempts on successful login
           if ((user.failedLoginAttempts || 0) > 0) {
