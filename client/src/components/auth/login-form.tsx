@@ -20,6 +20,24 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 
+// Helper functions for managing login attempts
+const getStoredAttempts = () => {
+  try {
+    const stored = localStorage.getItem('loginAttempts');
+    return stored ? parseInt(stored, 10) : 0;
+  } catch {
+    return 0;
+  }
+};
+
+const setStoredAttempts = (attempts: number) => {
+  try {
+    localStorage.setItem('loginAttempts', attempts.toString());
+  } catch {
+    // Ignore errors if localStorage is unavailable
+  }
+};
+
 const formSchema = z.object({
   email: z.string().email('Invalid email address').min(1, 'Email is required'),
   password: z.string().min(1, 'Password is required'), // Simplified for login - validation should be on server side
@@ -35,7 +53,7 @@ interface LoginFormProps {
 export function LoginForm({ onForgotPassword, onSuccess }: LoginFormProps = {}) {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [attemptCount, setAttemptCount] = useState(0);
+  const [attemptCount, setAttemptCount] = useState(() => getStoredAttempts());
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
@@ -67,12 +85,15 @@ export function LoginForm({ onForgotPassword, onSuccess }: LoginFormProps = {}) 
 
     setIsLoading(true);
     try {
-      // Get CSRF token
+      // Get and validate CSRF token
       const csrfToken = getCsrfToken();
+      if (!csrfToken) {
+        throw new Error('Security token missing. Please refresh the page and try again.');
+      }
 
       const response = await fetch('/api/auth/login', {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'X-CSRF-Token': csrfToken || '',
         },
@@ -103,9 +124,9 @@ export function LoginForm({ onForgotPassword, onSuccess }: LoginFormProps = {}) 
         localStorage.setItem('rcp_loginAt', Date.now().toString());
         localStorage.removeItem('authErrorHandledAt');
         localStorage.removeItem('authLastRedirectAt');
-        
+
         // Force refresh the auth query to pick up the new authentication state
-        queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+        queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
       } catch (e) {}
 
       // Get any saved redirect URL
@@ -131,20 +152,32 @@ export function LoginForm({ onForgotPassword, onSuccess }: LoginFormProps = {}) 
 
       // Only redirect to saved URL if it's a public page, otherwise go to dashboard
       const publicPages = ['/', '/privacy'];
-      const targetUrl = (redirectUrl && publicPages.includes(redirectUrl)) ? redirectUrl : '/dashboard';
-      
-      // Use a small delay to ensure the auth state is updated before redirect
-      setTimeout(() => {
-        // Force a full page reload to ensure proper authentication state
-        window.location.href = targetUrl;
-      }, 100);
+      const targetUrl =
+        redirectUrl && publicPages.includes(redirectUrl) ? redirectUrl : '/dashboard';
+
+      // Wait for auth state to be fully updated before redirect
+      const handleLoginSuccess = async () => {
+        try {
+          await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+          // Additional wait to ensure state is settled
+          await new Promise((resolve) => setTimeout(resolve, 500));
+          window.location.href = targetUrl;
+        } catch (error) {
+          console.error('Error updating auth state:', error);
+          // Fallback to immediate redirect if query invalidation fails
+          window.location.href = targetUrl;
+        }
+      };
+      handleLoginSuccess();
     } catch (error: any) {
       console.error('Login error caught:', error);
-      setAttemptCount((prev) => prev + 1);
+      const newAttemptCount = attemptCount + 1;
+      setAttemptCount(newAttemptCount);
+      setStoredAttempts(newAttemptCount);
 
       let errorMessage = error.message || 'Login failed. Please try again.';
-      if (attemptCount >= 1) {
-        const remainingAttempts = 5 - (attemptCount + 1);
+      if (newAttemptCount >= 1) {
+        const remainingAttempts = 5 - newAttemptCount;
         errorMessage += ` (${remainingAttempts} attempts remaining)`;
       }
 
@@ -250,11 +283,11 @@ export function LoginForm({ onForgotPassword, onSuccess }: LoginFormProps = {}) 
             <FormItem>
               <FormLabel>Email</FormLabel>
               <FormControl>
-                <Input 
-                  placeholder="Enter your email" 
+                <Input
+                  placeholder="Enter your email"
                   autoComplete="email"
                   type="email"
-                  {...field} 
+                  {...field}
                 />
               </FormControl>
               <FormMessage />
@@ -281,7 +314,7 @@ export function LoginForm({ onForgotPassword, onSuccess }: LoginFormProps = {}) 
                     size="sm"
                     className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                     onClick={() => setShowPassword(!showPassword)}
-                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </Button>

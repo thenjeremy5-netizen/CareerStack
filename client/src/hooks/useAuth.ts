@@ -260,10 +260,27 @@ export function useAuth() {
     } catch (error) {
       console.error("Logout error:", error);
       
-      // Force cleanup on error
-      localStorage.clear();
-      sessionStorage.clear();
-      queryClient.clear();
+      // Selective cleanup on error - only clear auth-related data
+      const authKeys = [
+        'lastActiveTime',
+        'redirectAfterLogin',
+        'authLoopDetected',
+        'lastAuthLoopReset',
+        'lastAuthRedirect',
+        'authRedirectAttempts',
+        'globalAuthRedirect',
+        'loginAttempts',
+        'rcp_loginAt'
+      ];
+      authKeys.forEach(key => localStorage.removeItem(key));
+      
+      // Clear auth-related session storage
+      Object.keys(sessionStorage)
+        .filter(key => key.includes('auth') || key.includes('token'))
+        .forEach(key => sessionStorage.removeItem(key));
+      
+      // Clear only auth-related queries
+      queryClient.removeQueries({ queryKey: ["/api/auth/user"] });
       
       // Redirect using replace to prevent history entry
       window.location.replace("/");
@@ -283,15 +300,25 @@ export function useAuth() {
     }
   };
 
-  // Add an interval to check session activity - only when authenticated
+  // Add an interval to check session activity
   React.useEffect(() => {
-    // Only run session timeout logic when user is authenticated
+    const SESSION_TIMEOUT = 60 * 60 * 1000; // 60 minutes (match server session)
+    const ACTIVITY_CHECK_INTERVAL = 60 * 1000; // 1 minute
+
+    // Check for existing session immediately
+    const lastActiveTime = localStorage.getItem("lastActiveTime");
+    if (lastActiveTime) {
+      const inactiveTime = Date.now() - parseInt(lastActiveTime);
+      if (inactiveTime > SESSION_TIMEOUT) {
+        logout();
+        return;
+      }
+    }
+
+    // Only continue setting up listeners if user is authenticated
     if (!user) {
       return;
     }
-
-    const SESSION_TIMEOUT = 60 * 60 * 1000; // 60 minutes (match server session)
-    const ACTIVITY_CHECK_INTERVAL = 60 * 1000; // 1 minute
 
     const checkSessionActivity = () => {
       const lastActiveTime = localStorage.getItem("lastActiveTime");
@@ -329,14 +356,41 @@ export function useAuth() {
     };
   }, [user]); // Depend on user so it resets when authentication state changes
 
-  // Handle non-auth errors that should be reported
+  // Handle non-auth errors with recovery logic
   React.useEffect(() => {
     if (error && error.message !== 'UNAUTHORIZED' && error.message !== 'CIRCUIT_BREAKER_OPEN') {
+      // Define recoverable errors
+      const recoverableErrors = ['NETWORK_ERROR', 'TIMEOUT', 'SERVER_ERROR'];
+      const isRecoverable = recoverableErrors.some(e => error.message.includes(e));
+
+      if (isRecoverable) {
+        // Implement exponential backoff for retries
+        const retryCount = parseInt(localStorage.getItem('authRetryCount') || '0');
+        const maxRetries = 3;
+        
+        if (retryCount < maxRetries) {
+          const backoffTime = Math.min(1000 * Math.pow(2, retryCount), 8000);
+          localStorage.setItem('authRetryCount', (retryCount + 1).toString());
+          
+          setTimeout(() => {
+            queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+          }, backoffTime);
+          
+          return;
+        }
+        
+        // Clear retry count after max retries or successful auth
+        localStorage.removeItem('authRetryCount');
+      }
+
+      // For non-recoverable errors, report with context
       const errorWithContext = new Error(`Authentication Error: ${error.message}`);
-      errorWithContext.stack = `${error.stack}\n\nContext:\nURL: ${window.location.href}\nTimestamp: ${new Date().toISOString()}\nUser Agent: ${navigator.userAgent}`;
-      throw errorWithContext;
+      errorWithContext.stack = `${error.stack}\n\nContext:\nURL: ${window.location.href}\nTimestamp: ${new Date().toISOString()}\nUser Agent: ${navigator.userAgent}\nRetry Count: ${localStorage.getItem('authRetryCount') || '0'}`;
+      
+      // Report error through the provided mechanism
+      reportError(errorWithContext);
     }
-  }, [error]);
+  }, [error, queryClient]);
 
   // If auth is prevented by circuit breaker, return unauthenticated state
   if (shouldPreventAuth) {

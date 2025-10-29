@@ -13,6 +13,7 @@ export const PrivateRoute: React.FC<PrivateRouteProps> = ({ path, component: Com
   const { isAuthenticated, isLoading, isAuthChecked, error } = useAuth();
   const [, setLocation] = useLocation();
   const [hasRedirected, setHasRedirected] = React.useState(false);
+  const navigationManager = React.useMemo(() => new NavigationHelper(), []);
 
   // Redirect logic that respects navigation and doesn't interfere with back button
   React.useEffect(() => {
@@ -22,27 +23,13 @@ export const PrivateRoute: React.FC<PrivateRouteProps> = ({ path, component: Com
       (isAuthChecked && !isAuthenticated) || error?.message === 'CIRCUIT_BREAKER_OPEN';
 
     if (shouldRedirect && !hasRedirected) {
-      // Don't redirect during navigation (back button, etc.)
-      if (NavigationHelper.shouldPreventAuthRedirect()) {
-        return;
-      }
-
       const currentPath = window.location.pathname;
 
-      // More conservative throttling - don't redirect if we just did
-      const lastRedirect = localStorage.getItem('lastPrivateRedirect');
-      const now = Date.now();
-
-      // Throttle redirects to prevent loops (2 second cooldown)
-      if (!lastRedirect || now - parseInt(lastRedirect) > 2000) {
-        localStorage.setItem('lastPrivateRedirect', now.toString());
-        // Don't store redirect path for dashboard to prevent redirect loops
-        if (currentPath !== '/dashboard') {
-          localStorage.setItem('redirectAfterLogin', currentPath);
-        }
-        setHasRedirected(true);
-        setLocation('/login');
-      }
+      // Use the navigation manager to handle redirect timing
+      // Simple redirect without timing checks
+      localStorage.setItem('redirectAfterLogin', currentPath !== '/dashboard' ? currentPath : '');
+      setHasRedirected(true);
+      setLocation('/login');
     }
   }, [isAuthenticated, isAuthChecked, hasRedirected, setLocation, error]);
 

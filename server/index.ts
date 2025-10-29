@@ -275,14 +275,11 @@ app.use((req, res, next) => {
       const { testDatabaseConnection } = await import('./db');
       const dbHealthy = await testDatabaseConnection();
       
-      // Initialize Redis health (client connects lazily under the hood)
-      log('Checking Redis health...');
-      const redisHealthy = await redisService.isHealthy();
-      if (redisHealthy) {
-        log('Redis is healthy');
-      } else {
-        logger.warn('Redis is not healthy, continuing in degraded mode');
-      }
+      // Initialize Redis with appropriate mode for environment
+      log('Initializing Redis service...');
+      const { initializeRedisService } = await import('./config/redisInit');
+      await initializeRedisService();
+      log('Redis service initialized');
 
       // Initialize and start job processor
       log('Starting job processor...');

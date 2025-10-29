@@ -1,7 +1,18 @@
-// In-memory Redis-compatible fallback client to run without a real Redis instance
-// This implements only the subset of commands used in the codebase.
+// In-memory Redis-compatible fallback client for development mode
+import { logger } from '../utils/logger';
 
 type RedisValue = string;
+
+// Log once that we're using in-memory mode
+const logInMemoryMode = (() => {
+  let hasLogged = false;
+  return () => {
+    if (!hasLogged && process.env.NODE_ENV === 'development') {
+      logger.info('Using in-memory Redis implementation (development mode)');
+      hasLogged = true;
+    }
+  };
+})();
 
 class InMemoryRedisClient {
   private kv = new Map<string, RedisValue>();
@@ -141,9 +152,17 @@ class InMemoryRedisClient {
 const inMemoryClient = new InMemoryRedisClient();
 
 export const redisService = {
-  getClient: () => inMemoryClient as any,
-  isHealthy: async () => true,
-  cleanup: async () => { /* nothing to cleanup for in-memory */ },
+  getClient: () => {
+    logInMemoryMode();
+    return inMemoryClient as any;
+  },
+  isHealthy: async () => {
+    logInMemoryMode();
+    return true;
+  },
+  cleanup: async () => {
+    // nothing to cleanup for in-memory
+  },
   ready: true,
   executeCommand: async <T>(command: () => Promise<T>, _operation: string): Promise<T> => {
     // In memory fallback just executes the command
